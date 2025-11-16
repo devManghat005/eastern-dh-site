@@ -7,7 +7,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-three/drei": "^9.97.6",
+    "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.15.13",
     "chart.js": "^4.5.1",
     "framer-motion": "^10.18.0",
