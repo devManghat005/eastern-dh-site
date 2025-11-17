@@ -1,6 +1,14 @@
-import React from "react";
-import HomeWorld from "./pages/HomeWorld";
+import React, { useState } from "react";
+import ExteriorPage from "./pages/ExteriorPage";
+import HomeWorld from "./pages/HomeWorld";   // your interior file
 
 export default function App() {
-  return <HomeWorld />;
+  const [inside, setInside] = useState(false);
+
+  return (
+    <>
+      {!inside && <ExteriorPage enterInterior={() => setInside(true)} />}
+      {inside && <HomeWorld />}
+    </>
+  );
 }
