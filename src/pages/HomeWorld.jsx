@@ -1,34 +1,135 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF, useProgress } from "@react-three/drei";
 import * as THREE from "three";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { SkeletonUtils } from "three-stdlib";
+
+import RaceSidebar from "./RaceSidebar";
+import AgeSidebar from "./AgeSidebar";
+import DummySidebar3 from "./DummySidebar3";
+import DummySidebar4 from "./DummySidebar4";
+
+/* --------------------------------------------
+   GLOBAL CACHES / PRELOAD
+--------------------------------------------- */
+
+const hdrCache = { texture: null };
+
+useGLTF.preload("/models/inside_prison.glb");
+useGLTF.preload("/models/mannequin.glb");
+
+/* --------------------------------------------
+   HDR SKY (BACKGROUND ONLY)
+--------------------------------------------- */
+
+function SceneHDRI({ onReady }) {
+  const { scene } = useThree();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const applyTexture = (tex) => {
+      if (cancelled) return;
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      hdrCache.texture = tex;
+      scene.background = tex;
+      if (onReady) onReady();
+    };
+
+    if (hdrCache.texture) {
+      applyTexture(hdrCache.texture);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loader = new RGBELoader().setDataType(THREE.FloatType);
+    loader.load("/hdr/citrus_orchard_road_puresky_4k.hdr", applyTexture);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scene, onReady]);
+
+  return null;
+}
+
+/* --------------------------------------------
+   HOVER OUTLINE MATERIAL
+--------------------------------------------- */
+
+function HoverGlow({ children }) {
+  const ref = useRef();
+  const [hovered, setHovered] = useState(false);
+
+  useFrame(() => {
+    if (!ref.current) return;
+
+    ref.current.traverse((obj) => {
+      if (
+        obj.isMesh &&
+        obj.material &&
+        Object.prototype.hasOwnProperty.call(obj.material, "emissiveIntensity")
+      ) {
+        obj.material.emissiveIntensity = hovered
+          ? THREE.MathUtils.lerp(obj.material.emissiveIntensity, 1.3, 0.15)
+          : THREE.MathUtils.lerp(obj.material.emissiveIntensity, 0.0, 0.15);
+      }
+    });
+  });
+
+  return (
+    <group
+      ref={ref}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+    >
+      {children}
+    </group>
+  );
+}
 
 /* --------------------------------------------
    PRISON INTERIOR
 --------------------------------------------- */
+
 function PrisonInterior() {
   const { scene } = useGLTF("/models/inside_prison.glb");
-  useEffect(() => scene.rotation.set(0, 0, 0), [scene]);
+
+  useEffect(() => {
+    scene.rotation.set(0, 0, 0);
+  }, [scene]);
+
   return <primitive object={scene} scale={1.3} />;
 }
 
 /* --------------------------------------------
-   MANNEQUIN WITH OPTIONAL POSE
+   MANNEQUIN
 --------------------------------------------- */
-function Mannequin({ position=[0,0,0], rotation=[0,0,0], pose=null }) {
+
+function Mannequin({ position, rotation, pose }) {
   const { scene } = useGLTF("/models/mannequin.glb");
   const clone = SkeletonUtils.clone(scene);
 
   useEffect(() => {
+    clone.traverse((obj) => {
+      if (obj.isMesh && obj.material) {
+        obj.material = obj.material.clone();
+        obj.material.emissive = new THREE.Color(0xffffff);
+        obj.material.emissiveIntensity = 0;
+      }
+    });
+
     if (!pose) return;
 
     clone.traverse((bone) => {
       if (!bone.isBone) return;
 
-      /* Existing poses */
-      if (pose === "lean" && bone.name.includes("spine_03"))
+      if (pose === "lean" && bone.name.includes("spine_03")) {
         bone.rotation.x = -0.3;
+      }
 
       if (pose === "open") {
         if (bone.name.includes("upperarm_l")) bone.rotation.z = 0.4;
@@ -36,67 +137,50 @@ function Mannequin({ position=[0,0,0], rotation=[0,0,0], pose=null }) {
       }
 
       if (pose === "cross") {
-        if (bone.name.includes("upperarm_l")) bone.rotation.z = -0.6;
-        if (bone.name.includes("upperarm_r")) bone.rotation.z = 0.6;
-        if (bone.name.includes("lowerarm_l")) bone.rotation.x = -1;
-        if (bone.name.includes("lowerarm_r")) bone.rotation.x = -1;
+        if (bone.name.includes("upperarm_l")) bone.rotation.z = -0.5;
+        if (bone.name.includes("upperarm_r")) bone.rotation.z = 0.5;
+        if (bone.name.includes("lowerarm_l")) bone.rotation.x = -0.8;
+        if (bone.name.includes("lowerarm_r")) bone.rotation.x = -0.8;
       }
 
       if (pose === "behind") {
         if (bone.name.includes("upperarm_l")) bone.rotation.x = -0.6;
         if (bone.name.includes("upperarm_r")) bone.rotation.x = -0.6;
-        if (bone.name.includes("lowerarm_l")) bone.rotation.x = -1.2;
-        if (bone.name.includes("lowerarm_r")) bone.rotation.x = -1.2;
       }
 
       if (pose === "down" && bone.name.includes("spine_05")) {
         bone.rotation.x = 0.4;
       }
 
-      /* --------------------------------------------
-         NEW POSE: ARMS FOLDED + WALL LEAN (m8)
-      --------------------------------------------- */
-      if (pose === "foldlean") {
-        // Lean torso backward slightly
-        if (bone.name.includes("spine_03")) bone.rotation.x = 0.18;
-        if (bone.name.includes("spine_04")) bone.rotation.x = 0.28;
-        if (bone.name.includes("spine_05")) bone.rotation.x = 0.32;
-
-        // ARMS FOLDED (NOT crossed)
-        // L arm comes inward
-        if (bone.name.includes("upperarm_l")) bone.rotation.z = -0.35;
-        if (bone.name.includes("lowerarm_l")) bone.rotation.x = -0.7;
-
-        // R arm comes inward slightly above
-        if (bone.name.includes("upperarm_r")) bone.rotation.z = 0.35;
-        if (bone.name.includes("lowerarm_r")) bone.rotation.x = -0.4;
-
-        // Relax head down a bit
-        if (bone.name.includes("head")) bone.rotation.x = 0.1;
-
-        // Slight sideways lean — reversed direction from before
-        if (bone.name.includes("spine_02")) bone.rotation.z = -0.1;
+      if (pose === "walllean") {
+        if (bone.name.includes("spine_03")) bone.rotation.x = 0.25;
+        if (bone.name.includes("spine_04")) bone.rotation.x = 0.35;
+        if (bone.name.includes("spine_05")) bone.rotation.x = 0.4;
       }
     });
   }, [clone, pose]);
 
   return (
-    <group position={position} rotation={rotation} scale={1}>
+    <group position={position} rotation={[0, rotation, 0]}>
       <primitive object={clone} />
     </group>
   );
 }
 
 /* --------------------------------------------
-   CAMERA CONTROLLER (unchanged)
+   CAMERA CONTROLLER
 --------------------------------------------- */
-function LimitedLookCamera({ inside }) {
+
+function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
   const { camera, gl } = useThree();
 
   const [down, setDown] = useState(false);
   const rotationRef = useRef(0);
   const lastX = useRef(0);
   const baseYaw = useRef(0);
+
+  const insideStartPos = useRef(new THREE.Vector3(10, 9, 0.5));
+  const insideStartRot = useRef(-0.5);
 
   useEffect(() => {
     camera.up.set(0, 1, 0);
@@ -111,36 +195,37 @@ function LimitedLookCamera({ inside }) {
     if (!inside) return;
 
     camera.up.set(0, 1, 0);
-    camera.position.set(10, 9, 0.5);
+    camera.position.copy(insideStartPos.current);
 
     requestAnimationFrame(() => {
       baseYaw.current = Math.PI / 2;
       rotationRef.current = baseYaw.current;
-      camera.rotation.set(-0.5, baseYaw.current, 0);
+      camera.rotation.set(insideStartRot.current, baseYaw.current, 0);
     });
   }, [inside, camera]);
 
   useEffect(() => {
-    const downFn = (e) => { setDown(true); lastX.current = e.clientX; };
+    const dom = gl.domElement;
+
+    const downFn = (e) => {
+      setDown(true);
+      lastX.current = e.clientX;
+    };
     const upFn = () => setDown(false);
 
     const moveFn = (e) => {
       if (!down) return;
       const dx = (e.clientX - lastX.current) * 0.003;
       lastX.current = e.clientX;
-
-      rotationRef.current = Math.min(
-        Math.max(rotationRef.current + dx, baseYaw.current - Math.PI/4),
-        baseYaw.current + Math.PI/4
-      );
+      rotationRef.current += dx;
     };
 
-    gl.domElement.addEventListener("mousedown", downFn);
+    dom.addEventListener("mousedown", downFn);
     window.addEventListener("mouseup", upFn);
     window.addEventListener("mousemove", moveFn);
 
     return () => {
-      gl.domElement.removeEventListener("mousedown", downFn);
+      dom.removeEventListener("mousedown", downFn);
       window.removeEventListener("mouseup", upFn);
       window.removeEventListener("mousemove", moveFn);
     };
@@ -148,66 +233,286 @@ function LimitedLookCamera({ inside }) {
 
   useFrame(() => {
     camera.rotation.order = "YXZ";
-    camera.rotation.y = rotationRef.current;
-    camera.rotation.z = 0;
+
+    if (zoomState === "rotate" && rotateTarget) {
+      const dir = new THREE.Vector3().subVectors(rotateTarget, camera.position);
+      const desiredYaw = Math.atan2(-dir.x, -dir.z);
+      const newYaw = THREE.MathUtils.lerp(
+        camera.rotation.y,
+        desiredYaw,
+        0.08
+      );
+
+      camera.rotation.y = newYaw;
+      camera.rotation.x = insideStartRot.current;
+      camera.rotation.z = 0;
+
+      rotationRef.current = newYaw;
+      return;
+    }
+
+    if (zoomState === "in" && zoomTarget) {
+      camera.position.lerp(zoomTarget, 0.05);
+      camera.rotation.x = insideStartRot.current;
+      camera.rotation.y = rotationRef.current;
+      camera.rotation.z = 0;
+      return;
+    }
+
+    if (zoomState === "out") {
+      camera.position.lerp(insideStartPos.current, 0.05);
+
+      const newYaw = THREE.MathUtils.lerp(
+        camera.rotation.y,
+        baseYaw.current,
+        0.05
+      );
+      const newPitch = THREE.MathUtils.lerp(
+        camera.rotation.x,
+        insideStartRot.current,
+        0.05
+      );
+
+      camera.rotation.y = newYaw;
+      camera.rotation.x = newPitch;
+      camera.rotation.z = 0;
+
+      rotationRef.current = newYaw;
+
+      return;
+    }
+
+    if (zoomState === "idle") {
+      camera.rotation.y = rotationRef.current;
+      camera.rotation.x = insideStartRot.current;
+      camera.rotation.z = 0;
+    }
   });
 
   return null;
 }
 
 /* --------------------------------------------
+   STORY OVERLAY
+--------------------------------------------- */
+
+function StoryOverlay() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const hide = () => setVisible(false);
+    window.addEventListener("pointerdown", hide);
+    return () => window.removeEventListener("pointerdown", hide);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className="absolute top-10 left-1/2 transform -translate-x-1/2 text-center 
+                 text-2xl text-white font-semibold 
+                 bg-black/70 px-6 py-4 rounded-xl shadow-lg"
+      style={{ zIndex: 999 }}
+    >
+      <p>Let us take a look at what they are talking about inside the prison...</p>
+    </div>
+  );
+}
+
+/* --------------------------------------------
    MAIN WORLD
 --------------------------------------------- */
+
 export default function HomeWorld() {
   const [inside] = useState(true);
 
-  /* GROUP 1 — talking pair */
+  const [zoomState, setZoomState] = useState("idle");
+  const [selected, setSelected] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Drei loader progress (for all GLBs in Suspense)
+  const { progress } = useProgress();
+  const glbReady = progress === 100;
+
+  const [hdrReady, setHdrReady] = useState(false);
+  const sceneReady = hdrReady && glbReady;
+
+  /* GROUP POSITIONS */
   const m1 = { pos: [1, 4.5, -5], rot: 0 };
-  const m2 = { pos: [0.5, 4.5, -5], rot: Math.PI/2 };
+  const m2 = { pos: [0.5, 4.5, -5], rot: Math.PI / 2 };
 
-  /* GROUP 2 — lean + open */
-  const m3 = { pos: [5.5, 4.5, 5], rot: Math.PI/1.8, pose: "lean" };
-  const m4 = { pos: [6, 4.5, 5], rot: -Math.PI/2, pose: "open" };
+  const m3 = { pos: [5.5, 4.5, 5], rot: Math.PI / 1.8, pose: "lean" };
+  const m4 = { pos: [6, 4.5, 5], rot: -Math.PI / 2, pose: "open" };
 
-  /* GROUP 3 — arms crossed + looking down */
-  const m5 = { pos: [1.5, 1.2, 2], rot: Math.PI/1.5, pose: "cross" };
-  const m6 = { pos: [2.5, 1.2, 2], rot: -Math.PI/1.5, pose: "down" };
-  const m7 = { pos: [2, 1.2, 2.5], rot: Math.PI/1, pose: "behind" };
+  const m5 = { pos: [1.5, 1.2, 2], rot: Math.PI / 1.5, pose: "cross" };
+  const m6 = { pos: [2.5, 1.2, 2], rot: -Math.PI / 1.5, pose: "down" };
+  const m7 = { pos: [2, 1.2, 2.5], rot: Math.PI, pose: "behind" };
 
-  /* GROUP 4 — m8 leaning with arms folded */
-  const m8 = { 
-    pos: [0, 4.5, 5.8], 
-    rot: -Math.PI/1, 
-    pose: "foldlean",
-    tilt: 0.22   // reversed lean direction
+  const m8 = { pos: [0, 4.5, 6], rot: Math.PI, pose: "walllean" };
+
+  /* ROTATION CENTERS */
+  const group1Center = new THREE.Vector3(
+    (m1.pos[0] + m2.pos[0]) / 2,
+    (m1.pos[1] + m2.pos[1]) / 2,
+    (m1.pos[2] + m2.pos[2]) / 2
+  );
+
+  const group2Center = new THREE.Vector3(
+    (m3.pos[0] + m4.pos[0]) / 2,
+    (m3.pos[1] + m4.pos[1]) / 2,
+    (m3.pos[2] + m4.pos[2]) / 2
+  );
+
+  const group3Center = new THREE.Vector3(
+    (m5.pos[0] + m6.pos[0] + m7.pos[0]) / 3,
+    (m5.pos[1] + m6.pos[1] + m7.pos[1]) / 3,
+    (m5.pos[2] + m6.pos[2] + m7.pos[2]) / 3
+  );
+
+  const group4Center = new THREE.Vector3(...m8.pos);
+
+  /* CAMERA TARGETS */
+  const rotateTarget =
+    selected === "group1"
+      ? group1Center
+      : selected === "group2"
+      ? group2Center
+      : selected === "group3"
+      ? group3Center
+      : selected === "group4"
+      ? group4Center
+      : null;
+
+  const zoomTarget =
+    selected === "group1"
+      ? new THREE.Vector3(1, 6.2, -5.5)
+      : selected === "group2"
+      ? new THREE.Vector3(5.8, 6, 4.3)
+      : selected === "group3"
+      ? new THREE.Vector3(2.5, 2.3, 2)
+      : selected === "group4"
+      ? new THREE.Vector3(0, 6, 5.3)
+      : null;
+
+  /* CLICK HANDLERS */
+  const animateSelect = (groupId) => {
+    setSelected(groupId);
+    setZoomState("rotate");
+
+    setTimeout(() => setZoomState("in"), 900);
+    setTimeout(() => {
+      setSidebarOpen(true);
+      setZoomState("idle");
+    }, 1700);
+  };
+
+  const handleBack = () => {
+    setSidebarOpen(false);
+    setZoomState("out");
+
+    setTimeout(() => {
+      setZoomState("idle");
+      setSelected(null);
+    }, 1200);
   };
 
   return (
-    <Canvas camera={{ fov:60, near:0.1, far:2000 }} style={{width:"100vw", height:"100vh"}}>
-      <ambientLight intensity={0.6}/>
-      <directionalLight position={[10,20,5]} intensity={1}/>
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        background: "black", // always black while loading
+        position: "relative",
+      }}
+    >
+      <StoryOverlay />
 
-      <PrisonInterior />
+      {/* Sidebar */}
+      {sidebarOpen && (
+        <div className="absolute top-0 right-0 w-[420px] h-full bg-white shadow-xl z-50">
+          <button
+            onClick={handleBack}
+            className="text-sm bg-black text-white px-3 py-1 m-4 rounded"
+          >
+            Back
+          </button>
 
-      <Mannequin position={m1.pos} rotation={[0,m1.rot,0]} />
-      <Mannequin position={m2.pos} rotation={[0,m2.rot,0]} />
+          {selected === "group1" && <RaceSidebar />}
+          {selected === "group2" && <AgeSidebar />}
+          {selected === "group3" && <DummySidebar3 />}
+          {selected === "group4" && <DummySidebar4 />}
+        </div>
+      )}
 
-      <Mannequin position={m3.pos} rotation={[0,m3.rot,0]} pose={m3.pose}/>
-      <Mannequin position={m4.pos} rotation={[0,m4.rot,0]} pose={m4.pose}/>
+      {/* Main 3D Canvas */}
+      <Canvas
+        camera={{ fov: 60, near: 0.1, far: 2000 }}
+        dpr={[1, 1.25]}
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1,
+        }}
+        style={{
+          width: "100%",
+          height: "100%",
+          opacity: sceneReady ? 1 : 0,
+          transition: "opacity 0.7s ease-in-out",
+        }}
+      >
+        {/* HDR sky */}
+        <SceneHDRI onReady={() => setHdrReady(true)} />
 
-      <Mannequin position={m5.pos} rotation={[0,m5.rot,0]} pose={m5.pose}/>
-      <Mannequin position={m6.pos} rotation={[0,m6.rot,0]} pose={m6.pose}/>
+        {/* Lights */}
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[10, 20, 5]} intensity={1} />
 
-      <Mannequin position={m7.pos} rotation={[0,m7.rot,0]} pose={m7.pose}/>
+        {/* GLB content inside Suspense so useProgress can track */}
+        <Suspense fallback={null}>
+          <PrisonInterior />
 
-      {/* m8 with folded arms + reversed tilt */}
-      <Mannequin 
-        position={m8.pos}
-        rotation={[m8.tilt, m8.rot, 0]}
-        pose={m8.pose}
-      />
+          {/* GROUP 1 */}
+          <HoverGlow>
+            <group onClick={() => animateSelect("group1")}>
+              <Mannequin position={m1.pos} rotation={m1.rot} />
+              <Mannequin position={m2.pos} rotation={m2.rot} />
+            </group>
+          </HoverGlow>
 
-      <LimitedLookCamera inside={inside} />
-    </Canvas>
+          {/* GROUP 2 */}
+          <HoverGlow>
+            <group onClick={() => animateSelect("group2")}>
+              <Mannequin position={m3.pos} rotation={m3.rot} pose={m3.pose} />
+              <Mannequin position={m4.pos} rotation={m4.rot} pose={m4.pose} />
+            </group>
+          </HoverGlow>
+
+          {/* GROUP 3 */}
+          <HoverGlow>
+            <group onClick={() => animateSelect("group3")}>
+              <Mannequin position={m5.pos} rotation={m5.rot} pose={m5.pose} />
+              <Mannequin position={m6.pos} rotation={m6.rot} pose={m6.pose} />
+              <Mannequin position={m7.pos} rotation={m7.rot} pose={m7.pose} />
+            </group>
+          </HoverGlow>
+
+          {/* GROUP 4 */}
+          <HoverGlow>
+            <group onClick={() => animateSelect("group4")}>
+              <Mannequin position={m8.pos} rotation={m8.rot} pose={m8.pose} />
+            </group>
+          </HoverGlow>
+
+          {/* Camera */}
+          <LimitedLookCamera
+            inside={inside}
+            zoomState={zoomState}
+            zoomTarget={zoomTarget}
+            rotateTarget={rotateTarget}
+          />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 }
