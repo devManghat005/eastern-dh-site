@@ -16,7 +16,9 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 const hdrCache = { texture: null };
 
 // Preload GLB
-useGLTF.preload("/models/the_prison.glb");
+useGLTF.preload(
+  "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/the_prison.glb"
+);
 
 const ZOOM_TARGET = new THREE.Vector3(50, 4, -42);
 
@@ -45,16 +47,19 @@ function SceneHDRI({ onReady }) {
 
     new RGBELoader()
       .setDataType(THREE.FloatType)
-      .load("/hdr/dikhololo_night_4k.hdr", (tex) => {
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        tex.encoding = THREE.sRGBEncoding;
+      .load(
+        "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/dikhololo_night_4k.hdr",
+        (tex) => {
+          tex.mapping = THREE.EquirectangularReflectionMapping;
+          tex.encoding = THREE.sRGBEncoding;
 
-        hdrCache.texture = tex;
-        scene.environment = tex;
-        scene.background = tex;
+          hdrCache.texture = tex;
+          scene.environment = tex;
+          scene.background = tex;
 
-        onReady?.();
-      });
+          onReady?.();
+        }
+      );
   }, [scene, onReady]);
 
   return null;
@@ -64,7 +69,9 @@ function SceneHDRI({ onReady }) {
    PRISON MODEL
 ----------------------------------------------------- */
 function PrisonExterior({ onLoaded }) {
-  const { scene } = useGLTF("/models/the_prison.glb");
+  const { scene } = useGLTF(
+    "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/the_prison.glb"
+  );
 
   useEffect(() => {
     scene.rotation.set(0, 0, 0);
@@ -225,12 +232,11 @@ export default function ExteriorPage({ enterInterior }) {
       style={{
         width: "100vw",
         height: "100vh",
-        background: "black",  // 🔥 always black until scene loads
+        background: "black",
         position: "relative",
       }}
     >
 
-      {/* Only show story AFTER scene is fully ready */}
       {sceneVisible && (
         <StoryOverlay onFinish={() => setZooming(false)} />
       )}

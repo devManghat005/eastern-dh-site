@@ -16,8 +16,8 @@ import DummySidebar4 from "./DummySidebar4";
 
 const hdrCache = { texture: null };
 
-useGLTF.preload("/models/inside_prison.glb");
-useGLTF.preload("/models/mannequin.glb");
+useGLTF.preload("https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/inside_prison.glb");
+useGLTF.preload("https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/mannequin.glb");
 
 /* --------------------------------------------
    HDR SKY (BACKGROUND ONLY)
@@ -35,7 +35,7 @@ function SceneHDRI({ onReady }) {
       tex.colorSpace = THREE.SRGBColorSpace;
       hdrCache.texture = tex;
       scene.background = tex;
-      if (onReady) onReady();
+      onReady?.();
     };
 
     if (hdrCache.texture) {
@@ -46,7 +46,10 @@ function SceneHDRI({ onReady }) {
     }
 
     const loader = new RGBELoader().setDataType(THREE.FloatType);
-    loader.load("/hdr/citrus_orchard_road_puresky_4k.hdr", applyTexture);
+    loader.load(
+      "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/citrus_orchard_puresky_4k.hdr",
+      (tex) => applyTexture(tex)
+    );    
 
     return () => {
       cancelled = true;
@@ -71,7 +74,7 @@ function HoverGlow({ children }) {
       if (
         obj.isMesh &&
         obj.material &&
-        Object.prototype.hasOwnProperty.call(obj.material, "emissiveIntensity")
+        "emissiveIntensity" in obj.material
       ) {
         obj.material.emissiveIntensity = hovered
           ? THREE.MathUtils.lerp(obj.material.emissiveIntensity, 1.3, 0.15)
@@ -96,7 +99,9 @@ function HoverGlow({ children }) {
 --------------------------------------------- */
 
 function PrisonInterior() {
-  const { scene } = useGLTF("/models/inside_prison.glb");
+  const { scene } = useGLTF(
+    "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/inside_prison.glb"
+  );
 
   useEffect(() => {
     scene.rotation.set(0, 0, 0);
@@ -110,7 +115,9 @@ function PrisonInterior() {
 --------------------------------------------- */
 
 function Mannequin({ position, rotation, pose }) {
-  const { scene } = useGLTF("/models/mannequin.glb");
+  const { scene } = useGLTF(
+    "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/mannequin.glb"
+  );
   const clone = SkeletonUtils.clone(scene);
 
   useEffect(() => {
@@ -127,9 +134,8 @@ function Mannequin({ position, rotation, pose }) {
     clone.traverse((bone) => {
       if (!bone.isBone) return;
 
-      if (pose === "lean" && bone.name.includes("spine_03")) {
+      if (pose === "lean" && bone.name.includes("spine_03"))
         bone.rotation.x = -0.3;
-      }
 
       if (pose === "open") {
         if (bone.name.includes("upperarm_l")) bone.rotation.z = 0.4;
@@ -148,9 +154,8 @@ function Mannequin({ position, rotation, pose }) {
         if (bone.name.includes("upperarm_r")) bone.rotation.x = -0.6;
       }
 
-      if (pose === "down" && bone.name.includes("spine_05")) {
+      if (pose === "down" && bone.name.includes("spine_05"))
         bone.rotation.x = 0.4;
-      }
 
       if (pose === "walllean") {
         if (bone.name.includes("spine_03")) bone.rotation.x = 0.25;
@@ -237,11 +242,7 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
     if (zoomState === "rotate" && rotateTarget) {
       const dir = new THREE.Vector3().subVectors(rotateTarget, camera.position);
       const desiredYaw = Math.atan2(-dir.x, -dir.z);
-      const newYaw = THREE.MathUtils.lerp(
-        camera.rotation.y,
-        desiredYaw,
-        0.08
-      );
+      const newYaw = THREE.MathUtils.lerp(camera.rotation.y, desiredYaw, 0.08);
 
       camera.rotation.y = newYaw;
       camera.rotation.x = insideStartRot.current;
@@ -330,7 +331,6 @@ export default function HomeWorld() {
   const [selected, setSelected] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Drei loader progress (for all GLBs in Suspense)
   const { progress } = useProgress();
   const glbReady = progress === 100;
 
@@ -421,13 +421,12 @@ export default function HomeWorld() {
       style={{
         width: "100vw",
         height: "100vh",
-        background: "black", // always black while loading
+        background: "black",
         position: "relative",
       }}
     >
       <StoryOverlay />
 
-      {/* Sidebar */}
       {sidebarOpen && (
         <div className="absolute top-0 right-0 w-[420px] h-full bg-white shadow-xl z-50">
           <button
@@ -444,7 +443,6 @@ export default function HomeWorld() {
         </div>
       )}
 
-      {/* Main 3D Canvas */}
       <Canvas
         camera={{ fov: 60, near: 0.1, far: 2000 }}
         dpr={[1, 1.25]}
@@ -461,18 +459,14 @@ export default function HomeWorld() {
           transition: "opacity 0.7s ease-in-out",
         }}
       >
-        {/* HDR sky */}
         <SceneHDRI onReady={() => setHdrReady(true)} />
 
-        {/* Lights */}
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 5]} intensity={1} />
 
-        {/* GLB content inside Suspense so useProgress can track */}
         <Suspense fallback={null}>
           <PrisonInterior />
 
-          {/* GROUP 1 */}
           <HoverGlow>
             <group onClick={() => animateSelect("group1")}>
               <Mannequin position={m1.pos} rotation={m1.rot} />
@@ -480,7 +474,6 @@ export default function HomeWorld() {
             </group>
           </HoverGlow>
 
-          {/* GROUP 2 */}
           <HoverGlow>
             <group onClick={() => animateSelect("group2")}>
               <Mannequin position={m3.pos} rotation={m3.rot} pose={m3.pose} />
@@ -488,7 +481,6 @@ export default function HomeWorld() {
             </group>
           </HoverGlow>
 
-          {/* GROUP 3 */}
           <HoverGlow>
             <group onClick={() => animateSelect("group3")}>
               <Mannequin position={m5.pos} rotation={m5.rot} pose={m5.pose} />
@@ -497,14 +489,12 @@ export default function HomeWorld() {
             </group>
           </HoverGlow>
 
-          {/* GROUP 4 */}
           <HoverGlow>
             <group onClick={() => animateSelect("group4")}>
               <Mannequin position={m8.pos} rotation={m8.rot} pose={m8.pose} />
             </group>
           </HoverGlow>
 
-          {/* Camera */}
           <LimitedLookCamera
             inside={inside}
             zoomState={zoomState}
