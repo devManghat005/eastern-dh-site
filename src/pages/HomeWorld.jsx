@@ -324,7 +324,8 @@ function StoryOverlay() {
    MAIN WORLD
 --------------------------------------------- */
 
-export default function HomeWorld() {
+export default function HomeWorld({ onBack }) {
+
   const [inside] = useState(true);
 
   const [zoomState, setZoomState] = useState("idle");
@@ -425,6 +426,15 @@ export default function HomeWorld() {
         position: "relative",
       }}
     >
+      {/* ---------------- BACK BUTTON ---------------- */}
+      <button
+        onClick={onBack}
+        className="absolute top-4 left-4 z-50 bg-black text-white 
+                  px-4 py-2 rounded-lg shadow-md hover:bg-gray-800 transition"
+      >
+        ← Back
+      </button>
+
       <StoryOverlay />
 
       {sidebarOpen && (

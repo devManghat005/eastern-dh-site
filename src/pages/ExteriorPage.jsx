@@ -207,7 +207,7 @@ const StoryOverlay = memo(function StoryOverlay({ onFinish }) {
   return (
     <div
       onClick={next}
-      className="absolute top-10 left-1/2 transform -translate-x-1/2 
+      className="absolute top-20 left-1/2 transform -translate-x-1/2 
                  text-center text-2xl text-white font-semibold 
                  bg-black/70 px-6 py-4 rounded-xl shadow-lg cursor-pointer select-none"
       style={{ zIndex: 999 }}
@@ -236,6 +236,28 @@ export default function ExteriorPage({ enterInterior }) {
         position: "relative",
       }}
     >
+
+      {/* ---------------------------------------------------
+           PILL NAVBAR (added, changed NOTHING else)
+      --------------------------------------------------- */}
+      <div
+        className="absolute top-4 left-1/2 -translate-x-1/2 
+                   flex gap-6 px-8 py-3 bg-white/20 backdrop-blur-md 
+                   rounded-full shadow-lg z-[1000] text-white font-semibold"
+      >
+        <button className="px-4 py-1 hover:text-yellow-300 transition">
+          About
+        </button>
+        <button className="px-4 py-1 hover:text-yellow-300 transition">
+          Entry 2
+        </button>
+        <button className="px-4 py-1 hover:text-yellow-300 transition">
+          Entry 3
+        </button>
+        <button className="px-4 py-1 hover:text-yellow-300 transition">
+          Entry 4
+        </button>
+      </div>
 
       {sceneVisible && (
         <StoryOverlay onFinish={() => setZooming(false)} />
