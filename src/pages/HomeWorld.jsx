@@ -1,42 +1,47 @@
 import React, { useRef, useEffect, useState, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useProgress, Text } from "@react-three/drei";
+import { useGLTF, useProgress, Text } from "@react-three/drei"; // Text imported
 import * as THREE from "three";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { SkeletonUtils } from "three-stdlib";
-
 import RaceSidebar from "./RaceSidebar";
 import SentenceSidebar from "./DummySidebar3";
 import DummySidebar4 from "./DummySidebar4";
-import AgeSidebar from "./AgeSidebar";
+import AgeSidebar from "./AgeSidebar"; 
 
-/* --------------------------------------------------
-   GLOBAL HDR CACHE
--------------------------------------------------- */
+/* --------------------------------------------
+   GLOBAL CACHES / PRELOAD
+--------------------------------------------- */
+
 const hdrCache = { texture: null };
 
-useGLTF.preload("/models/inside_prison.glb");
-useGLTF.preload("/models/mannequin.glb");
+useGLTF.preload(
+  "/models/inside_prison.glb"
+);
+useGLTF.preload(
+  "/models/mannequin.glb"
+);
 
-/* --------------------------------------------------
-   EXPLORE SIGN
--------------------------------------------------- */
+/* ==========================================================
+   EXPLORE SIGN (3D TEXT FLOATING)
+========================================================== */
+
 function ExploreText({ onClick }) {
   const ref = useRef();
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (ref.current) {
-      ref.current.position.y =
-        ref.current.userData.baseY + Math.sin(t * 1.2) * 0.25;
+      // animate relative to the *original* Y position
+      ref.current.position.y = ref.current.userData.baseY + Math.sin(t * 1.2) * 0.25;
     }
   });
 
   return (
     <Text
       ref={ref}
-      userData={{ baseY: 6 }}
-      position={[-10, 7, 0]}
+      userData={{ baseY: 6 }}   // ← SET YOUR BASE HEIGHT HERE
+      position={[-10, 7, 0]}    // ← MOVE IT DOWN HERE
       rotation={[0, 1.56, 0]}
       fontSize={1.5}
       anchorX="center"
@@ -51,10 +56,17 @@ function ExploreText({ onClick }) {
   );
 }
 
-/* --------------------------------------------------
-   EXPLORE CAMERA CONTROLLER
--------------------------------------------------- */
-function ExploreZoomController({ exploreZooming, setExploreZooming, onExplore, target }) {
+
+/* ==========================================================
+   EXPLORE CAMERA CONTROLLER (inside Canvas)
+========================================================== */
+
+function ExploreZoomController({
+  exploreZooming,
+  setExploreZooming,
+  onExplore,
+  target,
+}) {
   const { camera } = useThree();
 
   useFrame(() => {
@@ -71,17 +83,18 @@ function ExploreZoomController({ exploreZooming, setExploreZooming, onExplore, t
   return null;
 }
 
-/* --------------------------------------------------
-   HDRI LOADER
--------------------------------------------------- */
+/* --------------------------------------------
+   HDR SKY
+--------------------------------------------- */
+
 function SceneHDRI({ onReady }) {
   const { scene } = useThree();
 
   useEffect(() => {
-    let canceled = false;
+    let cancelled = false;
 
     const applyTexture = (tex) => {
-      if (canceled) return;
+      if (cancelled) return;
       tex.mapping = THREE.EquirectangularReflectionMapping;
       tex.colorSpace = THREE.SRGBColorSpace;
       hdrCache.texture = tex;
@@ -91,30 +104,42 @@ function SceneHDRI({ onReady }) {
 
     if (hdrCache.texture) {
       applyTexture(hdrCache.texture);
-      return () => (canceled = true);
+      return () => {
+        cancelled = true;
+      };
     }
 
-    new RGBELoader()
-      .setDataType(THREE.FloatType)
-      .load("/hdr/citrus_orchard_puresky_4k.hdr", (tex) => applyTexture(tex));
+    const loader = new RGBELoader().setDataType(THREE.FloatType);
+    loader.load(
+      "/hdr/citrus_orchard_puresky_4k.hdr",
+      (tex) => applyTexture(tex)
+    );
 
-    return () => (canceled = true);
+    return () => {
+      cancelled = true;
+    };
   }, [scene, onReady]);
 
   return null;
 }
 
-/* --------------------------------------------------
-   HOVER GLOW
--------------------------------------------------- */
+/* --------------------------------------------
+   HOVER OUTLINE MATERIAL
+--------------------------------------------- */
+
 function HoverGlow({ children }) {
   const ref = useRef();
   const [hovered, setHovered] = useState(false);
 
   useFrame(() => {
     if (!ref.current) return;
+
     ref.current.traverse((obj) => {
-      if (obj.isMesh && obj.material && "emissiveIntensity" in obj.material) {
+      if (
+        obj.isMesh &&
+        obj.material &&
+        "emissiveIntensity" in obj.material
+      ) {
         obj.material.emissiveIntensity = hovered
           ? THREE.MathUtils.lerp(obj.material.emissiveIntensity, 1.3, 0.15)
           : THREE.MathUtils.lerp(obj.material.emissiveIntensity, 0.0, 0.15);
@@ -133,11 +158,14 @@ function HoverGlow({ children }) {
   );
 }
 
-/* --------------------------------------------------
+/* --------------------------------------------
    PRISON INTERIOR
--------------------------------------------------- */
+--------------------------------------------- */
+
 function PrisonInterior() {
-  const { scene } = useGLTF("/models/inside_prison.glb");
+  const { scene } = useGLTF(
+    "/models/inside_prison.glb"
+  );
 
   useEffect(() => {
     scene.rotation.set(0, 0, 0);
@@ -146,11 +174,14 @@ function PrisonInterior() {
   return <primitive object={scene} scale={1.3} />;
 }
 
-/* --------------------------------------------------
+/* --------------------------------------------
    MANNEQUIN
--------------------------------------------------- */
+--------------------------------------------- */
+
 function Mannequin({ position, rotation, pose }) {
-  const { scene } = useGLTF("/models/mannequin.glb");
+  const { scene } = useGLTF(
+    "/models/mannequin.glb"
+  );
   const clone = SkeletonUtils.clone(scene);
 
   useEffect(() => {
@@ -205,15 +236,18 @@ function Mannequin({ position, rotation, pose }) {
   );
 }
 
-/* --------------------------------------------------
-   CAMERA CONTROLLER (unchanged)
--------------------------------------------------- */
+/* --------------------------------------------
+   CAMERA CONTROLLER
+--------------------------------------------- */
+
 function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
   const { camera, gl } = useThree();
+
   const [down, setDown] = useState(false);
   const rotationRef = useRef(0);
   const lastX = useRef(0);
   const baseYaw = useRef(0);
+
   const insideStartPos = useRef(new THREE.Vector3(10, 9, 0.5));
   const insideStartRot = useRef(-0.5);
 
@@ -228,8 +262,10 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
 
   useEffect(() => {
     if (!inside) return;
+
     camera.up.set(0, 1, 0);
     camera.position.copy(insideStartPos.current);
+
     requestAnimationFrame(() => {
       baseYaw.current = Math.PI / 2;
       rotationRef.current = baseYaw.current;
@@ -239,8 +275,13 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
 
   useEffect(() => {
     const dom = gl.domElement;
-    const downFn = (e) => { setDown(true); lastX.current = e.clientX; };
+
+    const downFn = (e) => {
+      setDown(true);
+      lastX.current = e.clientX;
+    };
     const upFn = () => setDown(false);
+
     const moveFn = (e) => {
       if (!down) return;
       const dx = (e.clientX - lastX.current) * 0.003;
@@ -265,10 +306,13 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
     if (zoomState === "rotate" && rotateTarget) {
       const dir = new THREE.Vector3().subVectors(rotateTarget, camera.position);
       const desiredYaw = Math.atan2(-dir.x, -dir.z);
-      camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, desiredYaw, 0.08);
+      const newYaw = THREE.MathUtils.lerp(camera.rotation.y, desiredYaw, 0.08);
+
+      camera.rotation.y = newYaw;
       camera.rotation.x = insideStartRot.current;
       camera.rotation.z = 0;
-      rotationRef.current = camera.rotation.y;
+
+      rotationRef.current = newYaw;
       return;
     }
 
@@ -276,29 +320,47 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
       camera.position.lerp(zoomTarget, 0.05);
       camera.rotation.x = insideStartRot.current;
       camera.rotation.y = rotationRef.current;
+      camera.rotation.z = 0;
       return;
     }
 
     if (zoomState === "out") {
       camera.position.lerp(insideStartPos.current, 0.05);
-      camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, baseYaw.current, 0.05);
-      camera.rotation.x = THREE.MathUtils.lerp(camera.rotation.x, insideStartRot.current, 0.05);
-      rotationRef.current = camera.rotation.y;
+
+      const newYaw = THREE.MathUtils.lerp(
+        camera.rotation.y,
+        baseYaw.current,
+        0.05
+      );
+      const newPitch = THREE.MathUtils.lerp(
+        camera.rotation.x,
+        insideStartRot.current,
+        0.05
+      );
+
+      camera.rotation.y = newYaw;
+      camera.rotation.x = newPitch;
+      camera.rotation.z = 0;
+
+      rotationRef.current = newYaw;
+
       return;
     }
 
     if (zoomState === "idle") {
       camera.rotation.y = rotationRef.current;
       camera.rotation.x = insideStartRot.current;
+      camera.rotation.z = 0;
     }
   });
 
   return null;
 }
 
-/* --------------------------------------------------
+/* --------------------------------------------
    STORY OVERLAY
--------------------------------------------------- */
+--------------------------------------------- */
+
 function StoryOverlay() {
   const [visible, setVisible] = useState(true);
 
@@ -312,8 +374,9 @@ function StoryOverlay() {
 
   return (
     <div
-      className="absolute top-10 left-1/2 transform -translate-x-1/2 text-center
-                 text-2xl text-white font-semibold bg-black/70 px-6 py-4 rounded-xl shadow-lg"
+      className="absolute top-10 left-1/2 transform -translate-x-1/2 text-center 
+                 text-2xl text-white font-semibold 
+                 bg-black/70 px-6 py-4 rounded-xl shadow-lg"
       style={{ zIndex: 999 }}
     >
       <p>Let us take a look at what they are talking about inside the prison...</p>
@@ -321,14 +384,17 @@ function StoryOverlay() {
   );
 }
 
-/* --------------------------------------------------
+/* --------------------------------------------
    MAIN WORLD
--------------------------------------------------- */
+--------------------------------------------- */
+
 export default function HomeWorld({ onBack, onExplore }) {
   const [inside] = useState(true);
+
   const [zoomState, setZoomState] = useState("idle");
   const [selected, setSelected] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [exploreZooming, setExploreZooming] = useState(false);
 
   const { progress } = useProgress();
@@ -350,7 +416,10 @@ export default function HomeWorld({ onBack, onExplore }) {
 
   const m8 = { pos: [0, 4.5, 6], rot: Math.PI, pose: "walllean" };
 
-  /* GROUP CENTERS */
+  /* EXPLORE TARGET */
+  const EXPLORE_TARGET = new THREE.Vector3(-10, 6, 0);
+
+  /* ROTATION CENTERS */
   const group1Center = new THREE.Vector3(
     (m1.pos[0] + m2.pos[0]) / 2,
     (m1.pos[1] + m2.pos[1]) / 2,
@@ -369,11 +438,9 @@ export default function HomeWorld({ onBack, onExplore }) {
     (m5.pos[2] + m6.pos[2] + m7.pos[2]) / 3
   );
 
-  const group4Center = new THREE.VectorVector3(...m8.pos);
+  const group4Center = new THREE.Vector3(...m8.pos);
 
   /* CAMERA TARGETS */
-  const EXPLORE_TARGET = new THREE.Vector3(-10, 6, 0);
-
   const rotateTarget =
     selected === "group1"
       ? group1Center
@@ -389,20 +456,19 @@ export default function HomeWorld({ onBack, onExplore }) {
     selected === "group1"
       ? new THREE.Vector3(1, 6.2, -5.5)
       : selected === "group2"
-      ? new THREE.VectorVector3(5.8, 6, 4.3)
+      ? new THREE.Vector3(5.8, 6, 4.3)
       : selected === "group3"
       ? new THREE.Vector3(2.5, 2.3, 2)
       : selected === "group4"
       ? new THREE.Vector3(0, 6, 5.3)
       : null;
 
-  /* CLICK TO SELECT */
-  const animateSelect = (group) => {
-    setSelected(group);
+  /* CLICK HANDLERS */
+  const animateSelect = (groupId) => {
+    setSelected(groupId);
     setZoomState("rotate");
 
     setTimeout(() => setZoomState("in"), 900);
-
     setTimeout(() => {
       setSidebarOpen(true);
       setZoomState("idle");
@@ -419,102 +485,32 @@ export default function HomeWorld({ onBack, onExplore }) {
     }, 1200);
   };
 
+  const handleExploreClick = () => {
+    setExploreZooming(true);
+  };
+
   return (
-    <div className="w-screen h-screen grid grid-cols-1 bg-black overflow-hidden relative">
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        background: "black",
+        position: "relative",
+      }}
+    >
       {/* BACK BUTTON */}
       <button
         onClick={onBack}
-        className="absolute top-4 left-4 z-50 bg-black text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-800 transition"
+        className="absolute top-4 left-4 z-50 bg-black text-white 
+                  px-4 py-2 rounded-lg shadow-md hover:bg-gray-800 transition"
       >
         ← Back
       </button>
 
       <StoryOverlay />
 
-      {/* CANVAS AREA (shrinks when sidebar opens) */}
-      <div
-        className={`h-full transition-all duration-300 ${
-          sidebarOpen ? "mr-[420px]" : "mr-0"
-        }`}
-        style={{ width: "100%", height: "100%" }}
-      >
-        <Canvas
-          camera={{ fov: 60, near: 0.1, far: 2000 }}
-          dpr={[1, 1.25]}
-          gl={{
-            antialias: true,
-            powerPreference: "high-performance",
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1,
-          }}
-          style={{
-            width: "100%",
-            height: "100%",
-            opacity: sceneReady ? 1 : 0,
-            transition: "opacity 0.7s ease-in-out",
-          }}
-        >
-          <SceneHDRI onReady={() => setHdrReady(true)} />
-
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 20, 5]} intensity={1} />
-
-          {sceneReady && (
-            <>
-              <ExploreText onClick={() => setExploreZooming(true)} />
-              <ExploreZoomController
-                exploreZooming={exploreZooming}
-                setExploreZooming={setExploreZooming}
-                target={EXPLORE_TARGET}
-                onExplore={onExplore}
-              />
-            </>
-          )}
-
-          <Suspense fallback={null}>
-            <PrisonInterior />
-
-            <HoverGlow>
-              <group onClick={() => animateSelect("group1")}>
-                <Mannequin position={m1.pos} rotation={m1.rot} />
-                <Mannequin position={m2.pos} rotation={m2.rot} />
-              </group>
-            </HoverGlow>
-
-            <HoverGlow>
-              <group onClick={() => animateSelect("group2")}>
-                <Mannequin position={m3.pos} rotation={m3.rot} pose={m3.pose} />
-                <Mannequin position={m4.pos} rotation={m4.rot} pose={m4.pose} />
-              </group>
-            </HoverGlow>
-
-            <HoverGlow>
-              <group onClick={() => animateSelect("group3")}>
-                <Mannequin position={m5.pos} rotation={m5.rot} pose={m5.pose} />
-                <Mannequin position={m6.pos} rotation={m6.rot} pose={m6.pose} />
-                <Mannequin position={m7.pos} rotation={m7.rot} pose={m7.pose} />
-              </group>
-            </HoverGlow>
-
-            <HoverGlow>
-              <group onClick={() => animateSelect("group4")}>
-                <Mannequin position={m8.pos} rotation={m8.rot} pose={m8.pose} />
-              </group>
-            </HoverGlow>
-
-            <LimitedLookCamera
-              inside={inside}
-              zoomState={zoomState}
-              zoomTarget={zoomTarget}
-              rotateTarget={rotateTarget}
-            />
-          </Suspense>
-        </Canvas>
-      </div>
-
-      {/* FIXED RIGHT SIDEBAR */}
       {sidebarOpen && (
-        <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 overflow-y-auto">
+        <div className="absolute top-0 right-0 w-[420px] h-full bg-white shadow-xl z-50">
           <button
             onClick={handleBack}
             className="text-sm bg-black text-white px-3 py-1 m-4 rounded"
@@ -528,6 +524,80 @@ export default function HomeWorld({ onBack, onExplore }) {
           {selected === "group4" && <DummySidebar4 />}
         </div>
       )}
+
+      <Canvas
+        camera={{ fov: 60, near: 0.1, far: 2000 }}
+        dpr={[1, 1.25]}
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1,
+        }}
+        style={{
+          width: "100%",
+          height: "100%",
+          opacity: sceneReady ? 1 : 0,
+          transition: "opacity 0.7s ease-in-out",
+        }}
+      >
+        <SceneHDRI onReady={() => setHdrReady(true)} />
+
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[10, 20, 5]} intensity={1} />
+
+        {/* EXPLORE SIGN + CAMERA CONTROLLER INSIDE CANVAS */}
+        {sceneReady && (
+          <>
+            <ExploreText onClick={handleExploreClick} />
+            <ExploreZoomController
+              exploreZooming={exploreZooming}
+              setExploreZooming={setExploreZooming}
+              onExplore={onExplore}
+              target={EXPLORE_TARGET}
+            />
+          </>
+        )}
+
+        <Suspense fallback={null}>
+          <PrisonInterior />
+
+          <HoverGlow>
+            <group onClick={() => animateSelect("group1")}>
+              <Mannequin position={m1.pos} rotation={m1.rot} />
+              <Mannequin position={m2.pos} rotation={m2.rot} />
+            </group>
+          </HoverGlow>
+
+          <HoverGlow>
+            <group onClick={() => animateSelect("group2")}>
+              <Mannequin position={m3.pos} rotation={m3.rot} pose={m3.pose} />
+              <Mannequin position={m4.pos} rotation={m4.rot} pose={m4.pose} />
+            </group>
+          </HoverGlow>
+
+          <HoverGlow>
+            <group onClick={() => animateSelect("group3")}>
+              <Mannequin position={m5.pos} rotation={m5.rot} pose={m5.pose} />
+              <Mannequin position={m6.pos} rotation={m6.rot} pose={m6.pose} />
+              <Mannequin position={m7.pos} rotation={m7.rot} pose={m7.pose} />
+            </group>
+          </HoverGlow>
+
+          <HoverGlow>
+            <group onClick={() => animateSelect("group4")}>
+              <Mannequin position={m8.pos} rotation={m8.rot} pose={m8.pose} />
+            </group>
+          </HoverGlow>
+
+          <LimitedLookCamera
+            inside={inside}
+            zoomState={zoomState}
+            zoomTarget={zoomTarget}
+            rotateTarget={rotateTarget}
+          />
+        </Suspense>
+      </Canvas>
     </div>
   );
 }
