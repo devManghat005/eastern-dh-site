@@ -17,7 +17,7 @@ const hdrCache = { texture: null };
 
 // Preload GLB
 useGLTF.preload(
-  "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/the_prison.glb"
+  "/models/the_prison.glb"
 );
 
 const ZOOM_TARGET = new THREE.Vector3(50, 4, -42);
@@ -48,7 +48,7 @@ function SceneHDRI({ onReady }) {
     new RGBELoader()
       .setDataType(THREE.FloatType)
       .load(
-        "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/dikhololo_night_4k.hdr",
+        "/hdr/dikhololo_night_4k.hdr",
         (tex) => {
           tex.mapping = THREE.EquirectangularReflectionMapping;
           tex.encoding = THREE.sRGBEncoding;
@@ -70,7 +70,7 @@ function SceneHDRI({ onReady }) {
 ----------------------------------------------------- */
 function PrisonExterior({ onLoaded }) {
   const { scene } = useGLTF(
-    "https://qh6sipxhffblnsh7.public.blob.vercel-storage.com/the_prison.glb"
+    "/models/the_prison.glb"
   );
 
   useEffect(() => {

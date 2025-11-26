@@ -1,144 +1,324 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
 
-export default function DummySidebar3() {
-  const [rows, setRows] = useState([]);
-  const [groups, setGroups] = useState({});
-  const [detail, setDetail] = useState(null);
+export default function SentenceSidebar() {
+  /* ----------------------------------------
+     STATE
+  ---------------------------------------- */
+  const [dialogue, setDialogue] = useState([]);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [ready, setReady] = useState(false);
 
-  // Dummy column name — change later
-  const col = "DummyColumn3";
+  const [globalDist, setGlobalDist] = useState({
+    ill: 0,
+    semi: 0,
+    lit: 0,
+    total: 0,
+  });
 
-  // Dummy grouping
-  const normalize = (raw) => {
-    if (!raw) return "GroupA";
-    const v = raw.toLowerCase();
-    if (v.includes("a")) return "GroupA";
-    if (v.includes("b")) return "GroupB";
+  const [byRace, setByRace] = useState({});
+  const [view, setView] = useState("summary"); // "summary" | "race"
+
+  const scrollRef = useRef(null);
+  const startedRef = useRef(false);
+
+  /* ----------------------------------------
+     CONSTANTS
+  ---------------------------------------- */
+  const raceCol = "EthnicityReligionOccupation";
+  const litCol = "Literacy"; // 0 = illiterate, 1 = semi, 3 = literate
+
+  const RACES = ["Black", "Mulatto", "Other"];
+
+  /* ----------------------------------------
+     STORY SCRIPT
+  ---------------------------------------- */
+  const script = [
+    { speaker: "George", text: "Sentencing day always comes too fast." },
+    { speaker: "William", text: "Some men get five years… some fifteen… for the same damn crime." },
+    { speaker: "Rich", text: "Maybe they look kindly on certain people." },
+    { speaker: "George", text: "Maybe it's luck… maybe it's mercy… maybe it's something else entirely." },
+    { speaker: "William", text: "We all committed wrongs… but why are the punishments so different?" },
+    { speaker: "Rich", text: "I pray tomorrow is fair." },
+    { speaker: "George", text: "I pray mercy is evenly given." },
+    { speaker: "William", text: "I hope justice is blind." },
+
+    { speaker: null, text: "These are the voices of three men waiting for their sentence." },
+    { speaker: null, text: "But there were hundreds like them behind the stone walls of Eastern State." },
+    { speaker: null, text: "Did literacy shape the fate of prisoners here?" },
+    { speaker: null, text: "Let us step back and examine the record itself." },
+  ];
+
+  /* ----------------------------------------
+     HELPERS
+  ---------------------------------------- */
+  const normalizeRace = (raw) => {
+    if (!raw) return "Other";
+    const v = String(raw).toLowerCase();
+    if (v.includes("black") && !v.includes("smith")) return "Black";
+    if (v.includes("mul")) return "Mulatto";
     return "Other";
   };
 
-  const runAnalysis = (parsedRows) => {
-    let map = { GroupA: 0, GroupB: 0, Other: 0 };
-
-    parsedRows.forEach((r) => {
-      const raw = r[col]?.trim();
-      const grp = normalize(raw);
-      map[grp] = (map[grp] || 0) + 1;
-    });
-
-    setGroups(map);
-    setDetail(null);
+  const bucketLiteracy = (val) => {
+    const n = Number(val);
+    if (n === 0) return "ill";
+    if (n === 1) return "semi";
+    if (n === 3) return "lit";
+    return null;
   };
 
-  const handleUpload = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  /* ----------------------------------------
+     ANALYSIS
+  ---------------------------------------- */
+  const runAnalysis = (rows) => {
+    const global = { ill: 0, semi: 0, lit: 0, total: 0 };
 
-    Papa.parse(f, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        setRows(res.data);
-        runAnalysis(res.data);
-      },
+    const raceBuckets = {};
+    RACES.forEach((r) => {
+      raceBuckets[r] = { ill: 0, semi: 0, lit: 0, total: 0 };
     });
-  };
-
-  const drillDown = (category) => {
-    let detailMap = {};
 
     rows.forEach((r) => {
-      const raw = r[col]?.trim() || "";
-      const grp = normalize(raw);
+      const race = normalizeRace(r[raceCol]);
+      const bucket = bucketLiteracy(r[litCol]);
 
-      if (grp === category) {
-        detailMap[raw] = (detailMap[raw] || 0) + 1;
+      if (!bucket) return;
+
+      global[bucket] += 1;
+      global.total += 1;
+
+      if (!raceBuckets[race]) {
+        raceBuckets[race] = { ill: 0, semi: 0, lit: 0, total: 0 };
       }
+      raceBuckets[race][bucket] += 1;
+      raceBuckets[race].total += 1;
     });
 
-    setDetail({ category, items: detailMap });
+    setGlobalDist(global);
+    setByRace(raceBuckets);
   };
 
-  return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-2">Dummy Analysis – Group 3</h2>
-      <p className="text-gray-700 text-sm mb-4">
-        This is a placeholder sidebar for analysis. You can replace this with
-        real logic later.
-      </p>
+  /* ----------------------------------------
+     AUTO LOAD CSV
+  ---------------------------------------- */
+  useEffect(() => {
+    fetch("/cleaned_data.csv")
+      .then((res) => res.text())
+      .then((text) => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (res) => runAnalysis(res.data),
+        });
+      });
+  }, []);
 
-      {/* Upload */}
-      <label className="block text-sm font-semibold mb-1">Upload CSV</label>
-      <input
-        type="file"
-        accept=".csv"
-        onChange={handleUpload}
-        className="text-sm mb-4"
-      />
+  /* ----------------------------------------
+     STORY ADVANCE
+  ---------------------------------------- */
+  const advanceDialogue = () => {
+    if (storyIndex < script.length) {
+      setDialogue((d) => [...d, script[storyIndex]]);
+      setStoryIndex((i) => i + 1);
+    } else {
+      setReady(true);
+    }
+  };
 
-      {/* Grouped Bars */}
-      {Object.keys(groups).length > 0 && (
-        <>
-          <h3 className="text-lg font-semibold mb-3">Dummy Groups</h3>
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    advanceDialogue();
+  }, []);
 
-          <div className="flex items-end gap-6 mt-4 mb-10">
-            {(() => {
-              const maxVal = Math.max(...Object.values(groups));
-              const maxHeight = 140;
-              const colors = ["#3b82f6", "#10b981", "#8b5cf6"];
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [dialogue, view]);
 
-              return Object.entries(groups).map(([label, value], idx) => {
-                const h = (value / maxVal) * maxHeight;
+  /* ----------------------------------------
+     FORMAT HELPERS
+  ---------------------------------------- */
+  const pct = (num, den) => {
+    if (!den) return "0%";
+    return ((num / den) * 100).toFixed(1) + "%";
+  };
 
-                return (
-                  <div
-                    key={label}
-                    className="text-center cursor-pointer"
-                    onClick={() => drillDown(label)}
-                  >
-                    <div
-                      className="w-10 mx-auto rounded-t"
-                      style={{ height: `${h}px`, background: colors[idx] }}
-                    ></div>
+  const widthPct = (num, den) => {
+    if (!den) return "0%";
+    return ((num / den) * 100).toFixed(1) + "%";
+  };
 
-                    <div className="text-sm mt-2">{label}</div>
-                    <div className="text-xs text-gray-600">{value}</div>
-                  </div>
-                );
-              });
-            })()}
+  /* ----------------------------------------
+     UI RENDER HELPERS
+  ---------------------------------------- */
+  const renderGlobalBar = () => {
+    const { ill, semi, lit, total } = globalDist;
+
+    return (
+      <div className="space-y-3">
+        <div className="text-lg font-semibold">
+          Literacy Across All Prisoners
+        </div>
+
+        <div className="text-xs text-gray-400">
+          This bar shows the share of all recorded prisoners who were
+          described as illiterate, semi-literate, or literate at admission.
+        </div>
+
+        <div className="w-full bg-gray-800 rounded h-5 overflow-hidden flex">
+          <div
+            style={{
+              width: widthPct(ill, total),
+              background: "#ef4444", // red
+            }}
+            className="h-full"
+          />
+          <div
+            style={{
+              width: widthPct(semi, total),
+              background: "#eab308", // yellow
+            }}
+            className="h-full"
+          />
+          <div
+            style={{
+              width: widthPct(lit, total),
+              background: "#3b82f6", // blue
+            }}
+            className="h-full"
+          />
+        </div>
+
+        <div className="text-xs text-gray-300 space-y-1">
+          <div>
+            <span className="inline-block w-3 h-3 rounded-sm mr-2" style={{ background: "#ef4444" }} />
+            Illiterate: <b>{ill}</b> inmates ({pct(ill, total)})
           </div>
-        </>
-      )}
+          <div>
+            <span className="inline-block w-3 h-3 rounded-sm mr-2" style={{ background: "#eab308" }} />
+            Semi-literate: <b>{semi}</b> inmates ({pct(semi, total)})
+          </div>
+          <div>
+            <span className="inline-block w-3 h-3 rounded-sm mr-2" style={{ background: "#3b82f6" }} />
+            Literate: <b>{lit}</b> inmates ({pct(lit, total)})
+          </div>
+        </div>
 
-      {/* Detailed Breakdown */}
-      {detail && (
-        <>
-          <hr className="my-6" />
+        <button
+          className="mt-4 px-4 py-2 bg-blue-600 rounded text-white font-semibold text-sm"
+          style={{ cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setView("race");
+          }}
+        >
+          Compare by Race →
+        </button>
+      </div>
+    );
+  };
 
-          <h3 className="text-lg font-semibold mb-3">
-            {detail.category} – Detailed Breakdown
-          </h3>
+  const renderRaceBars = () => {
+    return (
+      <div className="space-y-5">
+        <button
+          className="mb-3 px-3 py-1 border border-gray-600 rounded text-white text-xs"
+          style={{ background: "#000", cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setView("summary");
+          }}
+        >
+          ← Back to Overall Literacy
+        </button>
 
-          {Object.entries(detail.items).map(([label, value]) => (
-            <div key={label} className="mb-3">
-              <div className="flex justify-between text-sm mb-1">
-                <span>{label}</span>
-                <span>{value}</span>
+        <div className="text-lg font-semibold mb-1">
+          Literacy Distribution by Race
+        </div>
+
+        <div className="text-xs text-gray-400 mb-4">
+          Each bar shows how literacy was recorded within a racial category.
+          The colored segments represent illiterate, semi-literate, and literate prisoners.
+        </div>
+
+        {RACES.map((race) => {
+          const stats = byRace[race] || { ill: 0, semi: 0, lit: 0, total: 0 };
+          const { ill, semi, lit, total } = stats;
+
+          return (
+            <div key={race} className="space-y-1">
+              <div className="flex justify-between text-sm text-gray-200">
+                <span>{race}</span>
+                <span>{total} inmates</span>
               </div>
 
-              <div className="h-3 bg-gray-200 rounded">
+              <div className="w-full bg-gray-800 rounded h-4 overflow-hidden flex">
                 <div
-                  className="h-full bg-blue-500 rounded"
                   style={{
-                    width: `${Math.min(value * 3, 260)}px`,
+                    width: widthPct(ill, total),
+                    background: "#ef4444",
                   }}
-                ></div>
+                  className="h-full"
+                />
+                <div
+                  style={{
+                    width: widthPct(semi, total),
+                    background: "#eab308",
+                  }}
+                  className="h-full"
+                />
+                <div
+                  style={{
+                    width: widthPct(lit, total),
+                    background: "#3b82f6",
+                  }}
+                  className="h-full"
+                />
+              </div>
+
+              <div className="text-[11px] text-gray-300">
+                Illiterate: <b>{ill}</b> &nbsp;|&nbsp; Semi-literate: <b>{semi}</b> &nbsp;|&nbsp; Literate: <b>{lit}</b>
               </div>
             </div>
-          ))}
-        </>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /* ----------------------------------------
+     MAIN RENDER
+  ---------------------------------------- */
+  return (
+    <div
+      ref={scrollRef}
+      onClick={advanceDialogue}
+      className="p-6 overflow-y-auto font-serif"
+      style={{ background: "#000", height: "100%", color: "white", cursor: "pointer" }}
+    >
+      {/* STORY */}
+      <div className="space-y-3 mb-6">
+        {dialogue.map((d, i) => (
+          <div key={i} className={d.speaker ? "text-gray-200" : "text-gray-300 italic"}>
+            {d.speaker ? (
+              <span>
+                <b>{d.speaker}:</b> {d.text}
+              </span>
+            ) : (
+              d.text
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* DATA LAYERS */}
+      {ready && globalDist.total > 0 && (
+        <div className="mt-6">
+          {view === "summary" && renderGlobalBar()}
+          {view === "race" && renderRaceBars()}
+        </div>
       )}
     </div>
   );

@@ -2,11 +2,12 @@ import React, { useState } from "react";
 
 import ExteriorPage from "./pages/ExteriorPage";
 import HomeWorld from "./pages/HomeWorld";
-
+import AgeSidebar from "./pages/AgeSidebar"; 
 import AboutPage from "./pages/AboutPage";
 import MethodsPage from "./pages/MethodsPage";
 import TransparencyPage from "./pages/TransparencyPage";
 import BibliographyPage from "./pages/BibliographyPage";
+import Story from "./pages/Story";
 
 export default function App() {
   const [page, setPage] = useState("exterior");
@@ -70,15 +71,31 @@ export default function App() {
       )}
 
       {page === "interior" && (
-        <HomeWorld onBack={() => navigate("exterior")} />
+        <HomeWorld
+          onBack={() => navigate("exterior")}
+          onExplore={() => navigate("story")}
+        />
+      )}
+
+      {page === "story" && (
+        <Story
+          onNavigate={navigate}
+          onBack={() => navigate("exterior")}
+        />
       )}
 
       {page === "about" && (
-        <AboutPage onNavigate={navigate} onBack={() => navigate("exterior")} />
+        <AboutPage
+          onNavigate={navigate}
+          onBack={() => navigate("exterior")}
+        />
       )}
 
       {page === "methods" && (
-        <MethodsPage onNavigate={navigate} onBack={() => navigate("exterior")} />
+        <MethodsPage
+          onNavigate={navigate}
+          onBack={() => navigate("exterior")}
+        />
       )}
 
       {page === "transparency" && (

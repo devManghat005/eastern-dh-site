@@ -1,151 +1,295 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
 
 export default function RaceSidebar() {
-  const [rows, setRows] = useState([]);
-  const [groups, setGroups] = useState({});
-  const [detail, setDetail] = useState(null);
+  /* ----------------------------------------
+     STATE
+  ---------------------------------------- */
+  const [dialogue, setDialogue] = useState([]);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [ready, setReady] = useState(false);
 
-  // Fixed column
-  const col = "EthnicityReligionOccupation";
+  const [heatmap, setHeatmap] = useState({});
+  const [crimes, setCrimes] = useState([]);
+  const [view, setView] = useState("summary"); // summary | heatmap
 
-  // Normalize into 3 groups
-  const normalize = (raw) => {
+  const [globalAvg, setGlobalAvg] = useState(0);
+
+  const scrollRef = useRef(null);
+  const startedRef = useRef(false);
+
+  /* ----------------------------------------
+     CONSTANTS
+  ---------------------------------------- */
+  const raceCol = "EthnicityReligionOccupation";
+  const offenseCol = "Offense";
+  const sentCol = "Sentencing";
+
+  const RACES = ["Black", "Mulatto", "Other"];
+
+  /* ----------------------------------------
+     HELPERS
+  ---------------------------------------- */
+  const normalizeRace = (raw) => {
     if (!raw) return "Other";
-    const v = raw.toLowerCase();
-
+    const v = String(raw).toLowerCase();
     if (v.includes("black") && !v.includes("smith")) return "Black";
     if (v.includes("mul")) return "Mulatto";
     return "Other";
   };
 
-  // Compute grouped data
-  const runAnalysis = (parsedRows) => {
-    let map = { Black: 0, Mulatto: 0, Other: 0 };
-
-    parsedRows.forEach((r) => {
-      const raw = r[col]?.trim();
-      const grp = normalize(raw);
-      map[grp] = (map[grp] || 0) + 1;
-    });
-
-    setGroups(map);
-    setDetail(null);
+  const parseMonths = (raw) => {
+    if (!raw) return null;
+    const s = raw.toLowerCase();
+    const y = s.match(/(\d+)\s*yr/) ? parseInt(s.match(/(\d+)\s*yr/)[1]) : 0;
+    const m = s.match(/(\d+)\s*mo/) ? parseInt(s.match(/(\d+)\s*mo/)[1]) : 0;
+    if (!y && !m) return null;
+    return y * 12 + m;
   };
 
-  // Upload CSV → automatically analyze
-  const handleUpload = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  /* ----------------------------------------
+     DIALOGUE SCRIPT
+  ---------------------------------------- */
+  const script = [
+    { speaker: "Christian", text: "You hear those chains dragging in the corridor? Thought they were coming for me." },
+    { speaker: "Lyman", text: "They change the route each night. It's not silence they're after, it's uncertainty." },
+    { speaker: "Christian", text: "How long you reckon we’ll be here? Months? Years?" },
+    { speaker: "Lyman", text: "Time isn't measured in years here. It's measured in who they imagine you to be." },
+    { speaker: "Christian", text: "Strange… the crime feels smaller than the sentence." },
+    { speaker: "Lyman", text: "Some men carry punishment heavier than guilt." },
+    { speaker: null, text: "In places like these, justice is not always blind… sometimes, it closes only one eye." },
+    { speaker: null, text: "We must confront a sobering truth: not all men stand before judgment on equal ground." },
+    { speaker: null, text: "The measure of a sentence reflects more than the crime, it reveals the conscience of the society that delivers it." },
+    { speaker: null, text: "I have a dream… however, I am but a humble bystander. We aren't here for me." },
+    { speaker: null, text: "Let us listen closer to the whispers." },
+  ];
 
-    Papa.parse(f, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        setRows(res.data);
-        runAnalysis(res.data); // ← auto-run analysis here
-      },
-    });
-  };
+  /* ----------------------------------------
+     ANALYSIS
+  ---------------------------------------- */
+  const runAnalysis = (parsed) => {
+    const crimeMap = {};
+    const allMonths = [];
 
-  // Drill down into category
-  const drillDown = (category) => {
-    let detailMap = {};
+    parsed.forEach((r) => {
+      const race = normalizeRace(r[raceCol]);
+      const crime = (r[offenseCol] || "").trim();
+      const months = parseMonths(r[sentCol]);
 
-    rows.forEach((r) => {
-      const raw = r[col]?.trim() || "";
-      const grp = normalize(raw);
+      if (!crime || months === null) return;
 
-      if (grp === category) {
-        detailMap[raw] = (detailMap[raw] || 0) + 1;
+      allMonths.push(months);
+
+      if (!crimeMap[crime]) {
+        crimeMap[crime] = { Black: [], Mulatto: [], Other: [] };
       }
+      crimeMap[crime][race].push(months);
     });
 
-    setDetail({ category, items: detailMap });
+    const globalAvgCalc =
+      allMonths.length > 0
+        ? allMonths.reduce((a, b) => a + b, 0) / allMonths.length
+        : 0;
+
+    setGlobalAvg(globalAvgCalc);
+
+    const ranked = Object.entries(crimeMap)
+      .sort((a, b) => {
+        const A = Object.values(a[1]).reduce((s, v) => s + v.length, 0);
+        const B = Object.values(b[1]).reduce((s, v) => s + v.length, 0);
+        return B - A;
+      })
+      .slice(0, 8)
+      .map((e) => e[0]);
+
+    const hm = {};
+
+    ranked.forEach((crime) => {
+      hm[crime] = {};
+      RACES.forEach((race) => {
+        const arr = crimeMap[crime][race];
+        if (!arr.length) {
+          hm[crime][race] = null;
+        } else {
+          hm[crime][race] = arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+      });
+    });
+
+    setCrimes(ranked);
+    setHeatmap(hm);
+    setView("summary");
   };
 
+  /* ----------------------------------------
+     AUTO LOAD CSV
+  ---------------------------------------- */
+  useEffect(() => {
+    fetch("/cleaned_data.csv")
+      .then(res => res.text())
+      .then(text => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (res) => runAnalysis(res.data),
+        });
+      });
+  }, []);
+
+  /* ----------------------------------------
+     STORY CONTROL
+  ---------------------------------------- */
+  const advanceDialogue = () => {
+    if (storyIndex < script.length) {
+      setDialogue((d) => [...d, script[storyIndex]]);
+      setStoryIndex((i) => i + 1);
+    } else {
+      setReady(true);
+    }
+  };
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    advanceDialogue();
+  }, []);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [dialogue]);
+
+  /* ----------------------------------------
+     FORMAT HELPERS
+  ---------------------------------------- */
+  const fmt = (m) => {
+    if (m == null) return "—";
+    const y = Math.floor(m / 12);
+    const mo = Math.round(m % 12);
+    if (!y) return `${mo}m`;
+    if (!mo) return `${y}y`;
+    return `${y}y ${mo}m`;
+  };
+
+  /* ----------------------------------------
+     RENDER
+  ---------------------------------------- */
   return (
-    <div className="p-6">
-      {/* HEADER */}
-      <h2 className="text-2xl font-semibold mb-2">Race Analysis</h2>
-      <p className="text-gray-700 text-sm mb-4">
-        This sidebar explores racial classifications inside the dataset using grouped
-        and detailed visualizations. A full written explanation will go here later.
-      </p>
+    <div
+      ref={scrollRef}
+      onClick={advanceDialogue}
+      className="p-6 overflow-y-auto"
+      style={{ background: "#000", height: "100%", color: "white", cursor: "pointer" }}
+    >
 
-      {/* UPLOAD */}
-      <label className="block text-sm font-semibold mb-1">Upload CSV</label>
-      <input
-        type="file"
-        accept=".csv"
-        onChange={handleUpload}
-        className="text-sm mb-4"
-      />
-
-      {/* LEVEL 1 — GROUPED VERTICAL BARS */}
-      {Object.keys(groups).length > 0 && (
-        <>
-          <h3 className="text-lg font-semibold mb-3">Racial Groups</h3>
-
-          <div className="flex items-end gap-6 mt-4 mb-10">
-            {(() => {
-              const maxVal = Math.max(...Object.values(groups));
-              const maxHeight = 140;
-
-              return Object.entries(groups).map(([label, value], idx) => {
-                const h = (value / maxVal) * maxHeight;
-                const colors = ["#3b82f6", "#10b981", "#8b5cf6"];
-
-                return (
-                  <div
-                    key={label}
-                    className="text-center cursor-pointer"
-                    onClick={() => drillDown(label)}
-                  >
-                    <div
-                      className="w-10 mx-auto rounded-t"
-                      style={{
-                        height: `${h}px`,
-                        background: colors[idx],
-                      }}
-                    ></div>
-                    <div className="text-sm mt-2">{label}</div>
-                    <div className="text-xs text-gray-600">{value}</div>
-                  </div>
-                );
-              });
-            })()}
+      {/* STORY */}
+      <div className="space-y-3 mb-6">
+        {dialogue.map((d, i) => (
+          <div key={i} className="text-gray-200">
+            {d.speaker ? (
+              <span><b>{d.speaker}:</b> {d.text}</span>
+            ) : (
+              <i>{d.text}</i>
+            )}
           </div>
-        </>
-      )}
+        ))}
+      </div>
 
-      {/* LEVEL 2 — DETAILED BREAKDOWN */}
-      {detail && (
-        <>
-          <hr className="my-6" />
+      {/* AFTER STORY */}
+      {ready && (
+        <div className="mt-6">
 
-          <h3 className="text-lg font-semibold mb-3">
-            {detail.category} – Detailed Breakdown
-          </h3>
-
-          {Object.entries(detail.items).map(([label, value]) => (
-            <div key={label} className="mb-3">
-              <div className="flex justify-between text-sm mb-1">
-                <span>{label}</span>
-                <span>{value}</span>
+          {view === "summary" && (
+            <>
+              <div className="text-sm text-gray-400 mb-4">
+                Average sentencing time across all incarcerated individuals
               </div>
 
-              <div className="h-3 bg-gray-200 rounded">
-                <div
-                  className="h-full bg-blue-500 rounded"
-                  style={{
-                    width: `${Math.min(value * 3, 260)}px`,
-                  }}
-                ></div>
+              <div className="text-2xl font-bold mb-6">
+                {fmt(globalAvg)}
               </div>
-            </div>
-          ))}
-        </>
+
+              <button
+                className="px-4 py-2 bg-blue-600 rounded text-white font-semibold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setView("heatmap");
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                View By Race
+              </button>
+            </>
+          )}
+
+          {view === "heatmap" && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setView("summary");
+                }}
+                className="mb-4 px-3 py-1 rounded border border-gray-500 text-white"
+                style={{ background: "#000" }}
+              >
+                ← Back
+              </button>
+
+              <div className="text-white font-semibold mb-3 text-lg">
+                Race × Crime Sentencing Heatmap
+              </div>
+
+              <div className="overflow-x-auto pb-16">
+                <table className="min-w-full border-collapse text-white text-sm">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-700 px-2 py-1"></th>
+                      {RACES.map(r => (
+                        <th key={r} className="border border-gray-700 px-2 py-1">{r}</th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {crimes.map(crime => (
+                      <tr key={crime}>
+                        <td className="border border-gray-700 px-2 py-1 font-semibold">
+                          {crime}
+                        </td>
+
+                        {RACES.map(r => {
+                          const v = heatmap[crime][r];
+                          return (
+                            <td
+                              key={r}
+                              className="border border-gray-700 px-2 py-1 text-center"
+                              style={{
+                                background:
+                                  v == null
+                                    ? "rgba(40,40,40,1)"
+                                    : v < 12
+                                      ? "rgba(100,200,255,0.25)"
+                                      : v < 36
+                                        ? "rgba(100,200,255,0.45)"
+                                        : v < 60
+                                          ? "rgba(100,200,255,0.65)"
+                                          : "rgba(100,200,255,0.9)",
+                              }}
+                            >
+                              {fmt(v)}
+                            </td>
+                          );
+                        })}
+
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+        </div>
       )}
     </div>
   );
