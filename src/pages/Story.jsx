@@ -314,12 +314,6 @@ const STORY_STEPS = [
       "Extended isolation reliably produces psychological distress and lasting harm (Haney, p.286–289).",
   },
   
-  // VISUAL: PUNISHMENTS / CONDITIONS
-  {
-    type: "visual",
-    visualId: "punishments",
-  },
-  
   {
     type: "text",
     content:
