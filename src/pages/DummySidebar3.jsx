@@ -34,21 +34,42 @@ export default function SentenceSidebar() {
      STORY SCRIPT
   ---------------------------------------- */
   const script = [
-    { speaker: "George", text: "Sentencing day always comes too fast." },
-    { speaker: "William", text: "Some men get five years… some fifteen… for the same damn crime." },
-    { speaker: "Rich", text: "Maybe they look kindly on certain people." },
-    { speaker: "George", text: "Maybe it's luck… maybe it's mercy… maybe it's something else entirely." },
-    { speaker: "William", text: "We all committed wrongs… but why are the punishments so different?" },
-    { speaker: "Rich", text: "I pray tomorrow is fair." },
-    { speaker: "George", text: "I pray mercy is evenly given." },
-    { speaker: "William", text: "I hope justice is blind." },
-
-    { speaker: null, text: "These are the voices of three men waiting for their sentence." },
-    { speaker: null, text: "But there were hundreds like them behind the stone walls of Eastern State." },
-    { speaker: null, text: "Did literacy shape the fate of prisoners here?" },
-    { speaker: null, text: "Let us step back and examine the record itself." },
+    // Prisoners
+    { speaker: "George", text: "You ever make your way to the library?" },
+    { speaker: "William", text: "I tried last week. Picked up a book, stared at the page, and it still felt like someone else's world." },
+    { speaker: "Rich", text: "Same here. I kept thinking… if I could read better, maybe I'd understand how these people decide our sentences." },
+  
+    { speaker: "George", text: "There’s a whole room of knowledge sitting there, but half of us were never given the tools to use it." },
+    { speaker: "William", text: "They say the library is meant to help us reflect. Hard to reflect on words you can’t unlock." },
+  
+    // Narrator (philosopher's voice)
+    {
+      speaker: null,
+      text:
+        "In this place, the library stands like a quiet promise, one that some men can enter fully, and others only glance at through a fog."
+    },
+    {
+      speaker: null,
+      text:
+        "To read is not merely to follow letters on a page. It is to name the world, to understand the forces that shape one’s existence, and to recognize that no life is fated to silence."
+    },
+    {
+      speaker: null,
+      text:
+        "But here, within these stone walls, the ability to read often marked the difference between being understood and being misjudged, between mercy and indifference."
+    },
+    {
+      speaker: null,
+      text:
+        "Literacy does not erase the weight of punishment, yet it reshapes how a person navigates power… how they speak, how they defend themselves, how they are heard."
+    },
+    {
+      speaker: null,
+      text:
+        "When we look at their ages, we must ask… what might their lives have been if their years had unfolded beyond these walls instead of within them?"
+    }
   ];
-
+  
   /* ----------------------------------------
      HELPERS
   ---------------------------------------- */

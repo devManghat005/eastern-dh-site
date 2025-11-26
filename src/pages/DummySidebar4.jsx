@@ -14,11 +14,15 @@ export default function PardonSidebar() {
   const [byRace, setByRace] = useState({});
   const [showRace, setShowRace] = useState(false);
 
-  const [showCoins, setShowCoins] = useState(false);   // ⭐ NEW
+  const [showCoins, setShowCoins] = useState(false);
 
   const [coinResults, setCoinResults] = useState({});
   const [coinStreaks, setCoinStreaks] = useState({});
   const [coinAnimating, setCoinAnimating] = useState({});
+
+  // NEW: Track attempts and last successful attempts
+  const [coinAttempts, setCoinAttempts] = useState({});
+  const [lastPardonAttempts, setLastPardonAttempts] = useState({});
 
   const scrollRef = useRef(null);
   const startedRef = useRef(false);
@@ -38,11 +42,33 @@ export default function PardonSidebar() {
     { speaker: "Elijah", text: "Some men seem to have better odds. Same prison, different chance." },
     { speaker: "Elijah", text: "If mercy is a coin toss… I’m afraid I know which way it falls for men like me." },
 
-    { speaker: null, text: "This is one man’s voice, waiting for an answer." },
-    { speaker: null, text: "In Eastern State, there were hundreds like him, petitioning, hoping, fearing they would be forgotten." },
-    { speaker: null, text: "Some were pardoned. Many were not." },
-    { speaker: null, text: "Let us step back from this single voice and look at the record itself." },
-    { speaker: null, text: "Who was actually pardoned here—and did mercy fall evenly? Let us find out." },
+    { speaker: null, text:
+      "Elijah waits for a pardon, yet what he truly waits for is recognition, the hope that someone will see more in him than the record of his offenses. He longs to be known again as a human soul capable of rising after a fall."
+    },
+
+    { speaker: null, text:
+      "In Eastern State, a man does not only fear punishment. He fears being forgotten. He fears becoming a name that passes across a clerk’s desk without stirring even the faintest compassion."
+    },
+
+    { speaker: null, text:
+      "A pardon is often spoken of as mercy, but mercy itself is rarely pure. It bends, it hesitates, it follows the invisible preferences of those who grant it. Even forgiveness has its patterns."
+    },
+
+    { speaker: null, text:
+      "The prisoner waits in a silence deeper than the walls around him. His future will be decided far away from his cell by people who will never hear the trembling in his hope."
+    },
+
+    { speaker: null, text:
+      "When we study these records, we must resist the urge to treat them as statistics. Each entry is a human plea. Each denial is a weight placed upon a living heart."
+    },
+
+    { speaker: null, text:
+      "Here, we uncover an unsettling truth. Mercy, like punishment, does not fall evenly. It reflects the assumptions and fears of the society that chooses whom to redeem."
+    },
+
+    { speaker: null, text:
+      "So we must ask ourselves one final question. If forgiveness depends on who asks for it, what does that reveal about the justice we claim to uphold?"
+    },
   ];
 
   /* ----------------------------------------
@@ -95,10 +121,14 @@ export default function PardonSidebar() {
     setCoinResults({});
     setCoinStreaks({});
     setCoinAnimating({});
+
+    // reset attempts counts on reload
+    setCoinAttempts({});
+    setLastPardonAttempts({});
   };
 
   /* ----------------------------------------
-     AUTO LOAD LOCAL CSV
+     AUTO LOAD CSV
   ---------------------------------------- */
   useEffect(() => {
     fetch("/cleaned_data.csv")
@@ -142,6 +172,12 @@ export default function PardonSidebar() {
     const p = byRace[race]?.rate ?? 0;
     const outcome = Math.random() < p;
 
+    // count attempts
+    setCoinAttempts(prev => ({
+      ...prev,
+      [race]: (prev[race] || 0) + 1
+    }));
+
     setCoinAnimating(prev => ({
       ...prev,
       [race]: true
@@ -152,6 +188,14 @@ export default function PardonSidebar() {
         ...prev,
         [race]: outcome
       }));
+
+      // record successful pardon attempt count
+      if (outcome) {
+        setLastPardonAttempts(prev => ({
+          ...prev,
+          [race]: coinAttempts[race] ? coinAttempts[race] + 1 : 1
+        }));
+      }
 
       setCoinStreaks(prev => {
         const last = prev[race] || { p:0, n:0 };
@@ -177,6 +221,7 @@ export default function PardonSidebar() {
   };
 
   const fmtPct = (x)=> (x*100).toFixed(1)+"%";
+
 
   /* ----------------------------------------
      UI
@@ -251,7 +296,7 @@ export default function PardonSidebar() {
                 );
               })}
 
-              {/* ⭐ NEW BUTTON */}
+              {/* open coins */}
               {!showCoins && (
                 <button
                   className="mt-8 px-4 py-2 bg-white text-black border border-white rounded text-sm font-semibold"
@@ -264,15 +309,15 @@ export default function PardonSidebar() {
                 </button>
               )}
 
-              {/* ⭐ COIN SECTION ONLY IF CLICKED */}
+              {/* coin section */}
               {showCoins && (
                 <div className="mt-10 border-t border-gray-700 pt-6 space-y-5">
                   <div className="text-sm font-semibold">
-                    Mercy as a coin toss
+                    The Mercy coin
                   </div>
 
                   <div className="text-xs text-gray-400">
-                    Each racial group receives one weighted coin. Flip it as many times as you like.
+                    Each racial group receives one weighted coin. Flip it as many times as you like. Lets see how long it takes for you to be pardoned.
                   </div>
 
                   <div className="grid gap-4">
@@ -316,10 +361,18 @@ export default function PardonSidebar() {
                           </div>
 
                           <div className="text-[11px] text-gray-400 mt-2">
-                            {coinStreaks[r]?.p > 0 && <>Pardoned streak: {coinStreaks[r].p}</>}
-                            {coinStreaks[r]?.n > 0 && <>Not pardoned streak: {coinStreaks[r].n}</>}
+                            {coinStreaks[r]?.p > 0 && <>Pardoned streak: {coinStreaks[r].p} </>}
+                            {coinStreaks[r]?.n > 0 && <>Not pardoned streak: {coinStreaks[r].n} </>}
                             {!coinStreaks[r] && <>click to flip</>}
+
+                            {/* stays visible until next pardon */}
+                            {lastPardonAttempts[r] && (
+                              <div className="mt-1 text-green-300">
+                                Pardoned after {lastPardonAttempts[r]} tosses
+                              </div>
+                            )}
                           </div>
+
                         </div>
                       );
                     })}

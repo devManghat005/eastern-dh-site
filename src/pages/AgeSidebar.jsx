@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function AgeSidebar() {
   /* ----------------------------------------
@@ -16,43 +25,55 @@ export default function AgeSidebar() {
     total: 0,
   });
 
-  const [byRace, setByRace] = useState({});
+  const [rawByRace, setRawByRace] = useState({});
   const [view, setView] = useState("summary");
+  const [selectedRace, setSelectedRace] = useState(null);
 
   const scrollRef = useRef(null);
   const startedRef = useRef(false);
 
-  /* ----------------------------------------
-     CONSTANTS
-  ---------------------------------------- */
   const raceCol = "EthnicityReligionOccupation";
   const ageCol = "Age";
-
   const RACES = ["Black", "Mulatto", "Other"];
 
   /* ----------------------------------------
-     STORY SCRIPT (Philosophical Narrator - Marcus Aurelius)
+     REAL BACK BUTTON (MATCHES RACESIDEBAR)
+  ---------------------------------------- */
+  const BackButton = ({ onClick }) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="mb-4 px-3 py-1 rounded border border-gray-500 text-white"
+      style={{ background: "#000" }}
+    >
+      ← Back
+    </button>
+  );
+
+  /* ----------------------------------------
+     STORY SCRIPT
   ---------------------------------------- */
   const script = [
-    { speaker: "Thomas", text: "The years move strangely in here… sometimes slow as ash, sometimes gone in an instant." },
-    { speaker: "James", text: "Some enter with youth still clinging to them. Others arrive already carrying the weight of a lifetime." },
-    { speaker: "Thomas", text: "Strange, isn’t it? We share the same walls, yet time presses differently upon each of us." },
-    { speaker: "James", text: "Some had decades stripped away. Others never possessed decades to lose." },
-
+    { speaker: "Thomas", text: "You ever notice the ages in here? Some guys look like they just left home." },
+    { speaker: "James", text: "Yeah. Then you turn a corner and see someone old enough to be your grandfather." },
+    { speaker: "Thomas", text: "All of us doing time, but not the same kind of time." },
+    { speaker: "James", text: "Yeah… a year hits a kid different than it hits a man with gray hair." },
     {
       speaker: null,
       text:
-        "Time, like justice, presses unequally upon human lives. It does not ask who is prepared for its weight. It simply descends."
+        "Two men may share the same walls, yet the weight of those walls is not equal. Age shapes how hardship settles in the mind."
     },
     {
       speaker: null,
       text:
-        "Let us look beyond two men in conversation and toward the many who passed beneath these arches."
+        "Youth meets confinement with impatience, adulthood with resignation, and old age with a quiet reckoning of what remains."
     },
     {
       speaker: null,
       text:
-        "Let us consider who they were when they entered these walls—youthful, grown, or already near their final pages."
+        "When we look at their ages, we must ask: what might their lives have been if their years had unfolded beyond these walls instead of within them?"
     }
   ];
 
@@ -67,12 +88,28 @@ export default function AgeSidebar() {
     return "Other";
   };
 
-  const bucketAge = (num) => {
-    const n = Number(num);
-    if (!n || isNaN(n)) return null;
+  const bucketAgeCategory = (n) => {
     if (n < 21) return "youth";
     if (n < 45) return "adult";
     return "elder";
+  };
+
+  const makeHistogram = (list) => {
+    const bins = {
+      "≤20": 0,
+      "21–30": 0,
+      "31–40": 0,
+      "41–50": 0,
+      "51+": 0,
+    };
+    list.forEach((n) => {
+      if (n <= 20) bins["≤20"]++;
+      else if (n <= 30) bins["21–30"]++;
+      else if (n <= 40) bins["31–40"]++;
+      else if (n <= 50) bins["41–50"]++;
+      else bins["51+"]++;
+    });
+    return bins;
   };
 
   /* ----------------------------------------
@@ -80,31 +117,25 @@ export default function AgeSidebar() {
   ---------------------------------------- */
   const runAnalysis = (rows) => {
     const global = { youth: 0, adult: 0, elder: 0, total: 0 };
-    const raceBuckets = {};
-
-    RACES.forEach((r) => {
-      raceBuckets[r] = { youth: 0, adult: 0, elder: 0, total: 0 };
-    });
+    const rawAgesByRace = { Black: [], Mulatto: [], Other: [] };
 
     rows.forEach((r) => {
       const race = normalizeRace(r[raceCol]);
-      const bucket = bucketAge(r[ageCol]);
+      const ageNum = Number(r[ageCol]);
+      if (!ageNum || isNaN(ageNum)) return;
 
-      if (!bucket) return;
-
-      global[bucket]++;
+      global[bucketAgeCategory(ageNum)]++;
       global.total++;
 
-      raceBuckets[race][bucket]++;
-      raceBuckets[race].total++;
+      rawAgesByRace[race].push(ageNum);
     });
 
     setGlobalAges(global);
-    setByRace(raceBuckets);
+    setRawByRace(rawAgesByRace);
   };
 
   /* ----------------------------------------
-     AUTO LOAD CSV
+     LOAD CSV
   ---------------------------------------- */
   useEffect(() => {
     fetch("/cleaned_data.csv")
@@ -142,14 +173,11 @@ export default function AgeSidebar() {
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [dialogue, view]);
 
-  /* ----------------------------------------
-     HELPERS
-  ---------------------------------------- */
   const pct = (num, den) => (!den ? "0%" : ((num / den) * 100).toFixed(1) + "%");
   const widthPct = (num, den) => (!den ? "0%" : ((num / den) * 100).toFixed(1) + "%");
 
   /* ----------------------------------------
-     UI COMPONENTS
+     SUMMARY BAR
   ---------------------------------------- */
   const renderGlobalBar = () => {
     const { youth, adult, elder, total } = globalAges;
@@ -158,7 +186,10 @@ export default function AgeSidebar() {
       <div className="space-y-3">
         <div className="text-lg font-semibold">Age Distribution Across All Prisoners</div>
 
-        <div className="w-full bg-gray-800 rounded h-5 overflow-hidden flex">
+        <div
+          className="w-full bg-gray-800 rounded h-5 overflow-hidden flex cursor-pointer"
+          onClick={() => setView("race")}
+        >
           <div className="h-full" style={{ width: widthPct(youth, total), background: "#3b82f6" }} />
           <div className="h-full" style={{ width: widthPct(adult, total), background: "#22c55e" }} />
           <div className="h-full" style={{ width: widthPct(elder, total), background: "#ef4444" }} />
@@ -169,48 +200,46 @@ export default function AgeSidebar() {
           <div>Adults: {adult} ({pct(adult, total)})</div>
           <div>Elders: {elder} ({pct(elder, total)})</div>
         </div>
-
-        <button
-          className="mt-4 px-4 py-2 bg-blue-600 rounded text-white font-semibold text-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            setView("race");
-          }}
-        >
-          Compare by Race →
-        </button>
       </div>
     );
   };
 
+  /* ----------------------------------------
+     RACE BARS
+  ---------------------------------------- */
   const renderRaceBars = () => (
     <div className="space-y-5">
-      <button
-        className="mb-3 px-3 py-1 border border-gray-600 rounded text-white text-xs"
-        onClick={() => setView("summary")}
-      >
-        ← Back to Overall
-      </button>
+
+      <BackButton onClick={() => setView("summary")} />
 
       <div className="text-lg font-semibold">Age Distribution by Race</div>
 
       {RACES.map((race) => {
-        const s = byRace[race];
+        const ages = rawByRace[race] || [];
+        const total = ages.length;
+
+        const youth = ages.filter((a) => a < 21).length;
+        const adult = ages.filter((a) => a >= 21 && a < 45).length;
+        const elder = ages.filter((a) => a >= 45).length;
+
         return (
-          <div key={race} className="space-y-1">
+          <div
+            key={race}
+            className="space-y-1 cursor-pointer"
+            onClick={() => {
+              setSelectedRace(race);
+              setView("histogram");
+            }}
+          >
             <div className="flex justify-between text-sm text-gray-200">
               <span>{race}</span>
-              <span>{s.total} prisoners</span>
+              <span>{total} prisoners</span>
             </div>
 
             <div className="w-full bg-gray-800 rounded h-4 overflow-hidden flex">
-              <div className="h-full" style={{ width: widthPct(s.youth, s.total), background: "#3b82f6" }} />
-              <div className="h-full" style={{ width: widthPct(s.adult, s.total), background: "#22c55e" }} />
-              <div className="h-full" style={{ width: widthPct(s.elder, s.total), background: "#ef4444" }} />
-            </div>
-
-            <div className="text-[11px] text-gray-300">
-              Youth: {s.youth} | Adults: {s.adult} | Elders: {s.elder}
+              <div className="h-full" style={{ width: widthPct(youth, total), background: "#3b82f6" }} />
+              <div className="h-full" style={{ width: widthPct(adult, total), background: "#22c55e" }} />
+              <div className="h-full" style={{ width: widthPct(elder, total), background: "#ef4444" }} />
             </div>
           </div>
         );
@@ -219,30 +248,71 @@ export default function AgeSidebar() {
   );
 
   /* ----------------------------------------
-     MAIN RENDER
+     RECHARTS HISTOGRAM
+  ---------------------------------------- */
+  const renderHistogram = () => {
+    if (!selectedRace) return null;
+
+    const hist = makeHistogram(rawByRace[selectedRace]);
+    const data = Object.entries(hist).map(([label, count]) => ({
+      bin: label,
+      count,
+    }));
+
+    return (
+      <div className="space-y-6">
+
+        <BackButton onClick={() => setView("race")} />
+
+        <div className="text-xl font-semibold">
+          Age Distribution: {selectedRace}
+        </div>
+
+        <div className="w-full h-[320px] bg-transparent">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="bin" stroke="#ccc" />
+              <YAxis stroke="#ccc" />
+              <Tooltip
+                wrapperStyle={{ backgroundColor: "#222", border: "1px solid #555" }}
+                labelStyle={{ color: "#eee" }}
+                itemStyle={{ color: "#ccc" }}
+              />
+              <Bar
+                dataKey="count"
+                fill="#547C8A"
+                stroke="#E6D3B1"
+                strokeWidth={2}
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+      </div>
+    );
+  };
+
+  /* ----------------------------------------
+     RENDER PAGE
   ---------------------------------------- */
   return (
     <div
       ref={scrollRef}
       onClick={advanceDialogue}
-      className="
-        p-6 
-        overflow-y-auto 
-        overflow-x-hidden
-        font-serif 
-        h-full 
-        w-full 
-        max-w-full
-        bg-black 
-        text-white
-      "
-      style={{ cursor: "pointer" }}
+      className="p-6 overflow-y-auto font-serif"
+      style={{ background: "#000", height: "100%", color: "white", cursor: "pointer" }}
     >
       {/* STORY */}
-      <div className="space-y-3 mb-6 break-words">
+      <div className="space-y-3 mb-6">
         {dialogue.map((d, i) => (
           <div key={i} className={d.speaker ? "text-gray-200" : "text-gray-300 italic"}>
-            {d.speaker ? <span><b>{d.speaker}:</b> {d.text}</span> : d.text}
+            {d.speaker ? (
+              <span><b>{d.speaker}:</b> {d.text}</span>
+            ) : (
+              d.text
+            )}
           </div>
         ))}
       </div>
@@ -250,7 +320,9 @@ export default function AgeSidebar() {
       {/* DATA */}
       {ready && globalAges.total > 0 && (
         <div className="mt-6">
-          {view === "summary" ? renderGlobalBar() : renderRaceBars()}
+          {view === "summary" && renderGlobalBar()}
+          {view === "race" && renderRaceBars()}
+          {view === "histogram" && renderHistogram()}
         </div>
       )}
     </div>
