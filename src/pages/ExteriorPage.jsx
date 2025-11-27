@@ -16,9 +16,7 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 const hdrCache = { texture: null };
 
 // Preload GLB
-useGLTF.preload(
-  "/models/the_prison.glb"
-);
+useGLTF.preload("/models/the_prison.glb");
 
 const ZOOM_TARGET = new THREE.Vector3(50, 4, -42);
 
@@ -47,19 +45,16 @@ function SceneHDRI({ onReady }) {
 
     new RGBELoader()
       .setDataType(THREE.FloatType)
-      .load(
-        "/hdr/dikhololo_night_4k.hdr",
-        (tex) => {
-          tex.mapping = THREE.EquirectangularReflectionMapping;
-          tex.encoding = THREE.sRGBEncoding;
+      .load("/hdr/dikhololo_night_4k.hdr", (tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        tex.encoding = THREE.sRGBEncoding;
 
-          hdrCache.texture = tex;
-          scene.environment = tex;
-          scene.background = tex;
+        hdrCache.texture = tex;
+        scene.environment = tex;
+        scene.background = tex;
 
-          onReady?.();
-        }
-      );
+        onReady?.();
+      });
   }, [scene, onReady]);
 
   return null;
@@ -69,9 +64,7 @@ function SceneHDRI({ onReady }) {
    PRISON MODEL
 ----------------------------------------------------- */
 function PrisonExterior({ onLoaded }) {
-  const { scene } = useGLTF(
-    "/models/the_prison.glb"
-  );
+  const { scene } = useGLTF("/models/the_prison.glb");
 
   useEffect(() => {
     scene.rotation.set(0, 0, 0);
@@ -218,12 +211,50 @@ const StoryOverlay = memo(function StoryOverlay({ onFinish }) {
 });
 
 /* -----------------------------------------------------
+   🔥 NEW INSTRUCTIONS POPUP (ONLY CHANGE)
+----------------------------------------------------- */
+function InstructionsPopup({ onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(0,0,0,0.65)",
+        color: "white",
+        zIndex: 2000,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        fontSize: "22px",
+        textAlign: "center",
+        cursor: "pointer",
+        padding: "20px",
+      }}
+    >
+      <p><strong>Hold Left Click</strong> and drag to look around</p>
+      <p>You can explore the exterior freely</p>
+      <p>When you're ready to begin</p>
+      <p>Click the glowing <strong>ENTER</strong> sign</p>
+      <p style={{ marginTop: "25px", opacity: 0.7 }}>
+        Click anywhere to continue
+      </p>
+    </div>
+  );
+}
+
+/* -----------------------------------------------------
    MAIN PAGE
 ----------------------------------------------------- */
 export default function ExteriorPage({ enterInterior }) {
   const [zooming, setZooming] = useState(false);
   const [hdrReady, setHdrReady] = useState(false);
   const [modelReady, setModelReady] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true); // ← added
 
   const sceneVisible = hdrReady && modelReady;
 
@@ -236,10 +267,12 @@ export default function ExteriorPage({ enterInterior }) {
         position: "relative",
       }}
     >
+      {/* 🔥 NEW INSTRUCTIONS POPUP */}
+      {showInstructions && (
+        <InstructionsPopup onClose={() => setShowInstructions(false)} />
+      )}
 
-      {/* ---------------------------------------------------
-           PILL NAVBAR (added, changed NOTHING else)
-      --------------------------------------------------- */}
+      {/* PILL NAVBAR */}
       <div
         className="absolute top-4 left-1/2 -translate-x-1/2 
                    flex gap-6 px-8 py-3 bg-white/20 backdrop-blur-md 
@@ -290,9 +323,7 @@ export default function ExteriorPage({ enterInterior }) {
           <PrisonExterior onLoaded={() => setModelReady(true)} />
         </Suspense>
 
-        {sceneVisible && (
-          <EnterText onClick={() => setZooming(true)} />
-        )}
+        {sceneVisible && <EnterText onClick={() => setZooming(true)} />}
 
         <ExteriorCameraController
           zooming={zooming}
