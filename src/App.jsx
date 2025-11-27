@@ -7,7 +7,7 @@ import AboutPage from "./pages/AboutPage";
 import MethodsPage from "./pages/MethodsPage";
 import TransparencyPage from "./pages/TransparencyPage";
 import BibliographyPage from "./pages/BibliographyPage";
-import Story from "./pages/Story";
+import Story from "./pages/StoryCorridor";
 
 export default function App() {
   const [page, setPage] = useState("exterior");
