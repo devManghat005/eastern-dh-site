@@ -211,7 +211,7 @@ const StoryOverlay = memo(function StoryOverlay({ onFinish }) {
 });
 
 /* -----------------------------------------------------
-   🔥 NEW INSTRUCTIONS POPUP (ONLY CHANGE)
+   INSTRUCTIONS POPUP
 ----------------------------------------------------- */
 function InstructionsPopup({ onClose }) {
   return (
@@ -238,8 +238,7 @@ function InstructionsPopup({ onClose }) {
     >
       <p><strong>Hold Left Click</strong> and drag to look around</p>
       <p>You can explore the exterior freely</p>
-      <p>When you're ready to begin</p>
-      <p>Click the glowing <strong>ENTER</strong> sign</p>
+      <p><strong>Click the text bubble</strong> to continue the story</p>
       <p style={{ marginTop: "25px", opacity: 0.7 }}>
         Click anywhere to continue
       </p>
@@ -254,7 +253,10 @@ export default function ExteriorPage({ enterInterior }) {
   const [zooming, setZooming] = useState(false);
   const [hdrReady, setHdrReady] = useState(false);
   const [modelReady, setModelReady] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(true); // ← added
+  const [showInstructions, setShowInstructions] = useState(true);
+
+  /* 🔥 NEW STATE — ENTER SIGN ONLY WHEN STORY IS DONE */
+  const [storyFinished, setStoryFinished] = useState(false);
 
   const sceneVisible = hdrReady && modelReady;
 
@@ -267,12 +269,11 @@ export default function ExteriorPage({ enterInterior }) {
         position: "relative",
       }}
     >
-      {/* 🔥 NEW INSTRUCTIONS POPUP */}
       {showInstructions && (
         <InstructionsPopup onClose={() => setShowInstructions(false)} />
       )}
 
-      {/* PILL NAVBAR */}
+      {/* NAVBAR */}
       <div
         className="absolute top-4 left-1/2 -translate-x-1/2 
                    flex gap-6 px-8 py-3 bg-white/20 backdrop-blur-md 
@@ -293,7 +294,7 @@ export default function ExteriorPage({ enterInterior }) {
       </div>
 
       {sceneVisible && (
-        <StoryOverlay onFinish={() => setZooming(false)} />
+        <StoryOverlay onFinish={() => setStoryFinished(true)} />
       )}
 
       <Canvas
@@ -323,7 +324,10 @@ export default function ExteriorPage({ enterInterior }) {
           <PrisonExterior onLoaded={() => setModelReady(true)} />
         </Suspense>
 
-        {sceneVisible && <EnterText onClick={() => setZooming(true)} />}
+        {/* 🔥 ENTER SIGN NOW ONLY SHOWS AFTER STORY COMPLETES */}
+        {sceneVisible && storyFinished && (
+          <EnterText onClick={() => setZooming(true)} />
+        )}
 
         <ExteriorCameraController
           zooming={zooming}
