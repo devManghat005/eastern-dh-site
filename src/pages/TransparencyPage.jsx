@@ -16,6 +16,10 @@ export default function TransparencyPage({ onBack }) {
 
         {/* LEFT TEXT COLUMN */}
         <div className="flex-1 max-w-3xl pr-6 space-y-10 text-xl text-gray-300 leading-relaxed text-justify">
+          {/* SECTION 1: INTRO LINE */}
+          <p className="text-xl text-gray-300 leading-relaxed mb-10">
+          In doing our part to minimise bias and allow for an open discussion of the topic at hand we lay all our card on the table about how we reach our conclusions. 
+          </p>
 
           {/* SECTION 1: SOURCE */}
           <div>
@@ -145,7 +149,7 @@ export default function TransparencyPage({ onBack }) {
         <div className="flex-shrink-0 w-[650px] mt-2 flex flex-col gap-6">
 
           <img
-            src="/images/sky.jpg"
+            src="/images/prison.webp"
             alt="Eastern State Penitentiary Aerial View"
             className="w-full h-auto rounded-xl shadow-xl object-cover border border-white/10"
           />

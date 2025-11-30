@@ -8,6 +8,7 @@ import MethodsPage from "./pages/MethodsPage";
 import TransparencyPage from "./pages/TransparencyPage";
 import BibliographyPage from "./pages/BibliographyPage";
 import Story from "./pages/StoryCorridor";
+import LetterPage from "./pages/Letter";   // ★ added
 
 export default function App() {
   const [page, setPage] = useState("exterior");
@@ -107,6 +108,14 @@ export default function App() {
 
       {page === "bibliography" && (
         <BibliographyPage
+          onNavigate={navigate}
+          onBack={() => navigate("exterior")}
+        />
+      )}
+
+      {/* ★★★ NEW LETTER PAGE ROUTE ★★★ */}
+      {page === "letter" && (
+        <LetterPage
           onNavigate={navigate}
           onBack={() => navigate("exterior")}
         />

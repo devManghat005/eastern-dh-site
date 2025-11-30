@@ -1,10 +1,9 @@
 import React, { useRef, useEffect, useState, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useProgress, Text } from "@react-three/drei";
+import { useGLTF, useProgress, Text } from "@react-three/drei"; 
 import * as THREE from "three";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { SkeletonUtils } from "three-stdlib";
-
 import RaceSidebar from "./RaceSidebar";
 import SentenceSidebar from "./DummySidebar3";
 import DummySidebar4 from "./DummySidebar4";
@@ -22,13 +21,14 @@ useGLTF.preload("/models/mannequin.glb");
 /* ==========================================================
    EXPLORE SIGN
 ========================================================== */
+
 function ExploreText({ onClick }) {
   const ref = useRef();
+
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (ref.current) {
-      ref.current.position.y =
-        ref.current.userData.baseY + Math.sin(t * 1.2) * 0.25;
+      ref.current.position.y = ref.current.userData.baseY + Math.sin(t * 1.2) * 0.25;
     }
   });
 
@@ -52,8 +52,9 @@ function ExploreText({ onClick }) {
 }
 
 /* ==========================================================
-   EXPLORE CAMERA CONTROLLER
+   EXPLORE CAMERA
 ========================================================== */
+
 function ExploreZoomController({
   exploreZooming,
   setExploreZooming,
@@ -79,6 +80,7 @@ function ExploreZoomController({
 /* --------------------------------------------
    HDR SKY
 --------------------------------------------- */
+
 function SceneHDRI({ onReady }) {
   const { scene } = useThree();
 
@@ -96,27 +98,33 @@ function SceneHDRI({ onReady }) {
 
     if (hdrCache.texture) {
       applyTexture(hdrCache.texture);
-      return () => (cancelled = true);
+      return () => {
+        cancelled = true;
+      };
     }
 
     const loader = new RGBELoader().setDataType(THREE.FloatType);
     loader.load("/hdr/citrus_orchard_puresky_4k.hdr", (tex) => applyTexture(tex));
 
-    return () => (cancelled = true);
+    return () => {
+      cancelled = true;
+    };
   }, [scene, onReady]);
 
   return null;
 }
 
 /* --------------------------------------------
-   HOVER OUTLINE GLOW
+   HOVER GLOW
 --------------------------------------------- */
+
 function HoverGlow({ children }) {
   const ref = useRef();
   const [hovered, setHovered] = useState(false);
 
   useFrame(() => {
     if (!ref.current) return;
+
     ref.current.traverse((obj) => {
       if (obj.isMesh && obj.material && "emissiveIntensity" in obj.material) {
         obj.material.emissiveIntensity = hovered
@@ -140,17 +148,21 @@ function HoverGlow({ children }) {
 /* --------------------------------------------
    PRISON INTERIOR
 --------------------------------------------- */
+
 function PrisonInterior() {
   const { scene } = useGLTF("/models/inside_prison.glb");
+
   useEffect(() => {
     scene.rotation.set(0, 0, 0);
   }, [scene]);
+
   return <primitive object={scene} scale={1.3} />;
 }
 
 /* --------------------------------------------
    MANNEQUIN
 --------------------------------------------- */
+
 function Mannequin({ position, rotation, pose }) {
   const { scene } = useGLTF("/models/mannequin.glb");
   const clone = SkeletonUtils.clone(scene);
@@ -210,6 +222,7 @@ function Mannequin({ position, rotation, pose }) {
 /* --------------------------------------------
    CAMERA CONTROLLER
 --------------------------------------------- */
+
 function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
   const { camera, gl } = useThree();
 
@@ -221,22 +234,21 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
   const insideStartPos = useRef(new THREE.Vector3(10, 9, 0.5));
   const insideStartRot = useRef(-0.5);
 
-  // STARTING CAMERA OUTSIDE
   useEffect(() => {
     camera.up.set(0, 1, 0);
     camera.position.set(50, 2, 5);
-
     requestAnimationFrame(() => {
       camera.lookAt(0, 5, 0);
       camera.rotation.z = 0;
     });
   }, [camera]);
 
-  // SWITCH TO INSIDE VIEW
   useEffect(() => {
     if (!inside) return;
 
+    camera.up.set(0, 1, 0);
     camera.position.copy(insideStartPos.current);
+
     requestAnimationFrame(() => {
       baseYaw.current = Math.PI / 2;
       rotationRef.current = baseYaw.current;
@@ -244,7 +256,6 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
     });
   }, [inside, camera]);
 
-  // MOUSE DRAG LOOK
   useEffect(() => {
     const dom = gl.domElement;
 
@@ -272,23 +283,19 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
     };
   }, [down, gl.domElement]);
 
-  // FRAME UPDATE
   useFrame(() => {
     camera.rotation.order = "YXZ";
 
     if (zoomState === "rotate" && rotateTarget) {
       const dir = new THREE.Vector3().subVectors(rotateTarget, camera.position);
       const desiredYaw = Math.atan2(-dir.x, -dir.z);
+      const newYaw = THREE.MathUtils.lerp(camera.rotation.y, desiredYaw, 0.08);
 
-      camera.rotation.y = THREE.MathUtils.lerp(
-        camera.rotation.y,
-        desiredYaw,
-        0.08
-      );
+      camera.rotation.y = newYaw;
       camera.rotation.x = insideStartRot.current;
       camera.rotation.z = 0;
 
-      rotationRef.current = camera.rotation.y;
+      rotationRef.current = newYaw;
       return;
     }
 
@@ -303,114 +310,63 @@ function LimitedLookCamera({ inside, zoomState, zoomTarget, rotateTarget }) {
     if (zoomState === "out") {
       camera.position.lerp(insideStartPos.current, 0.05);
 
-      camera.rotation.y = THREE.MathUtils.lerp(
+      const newYaw = THREE.MathUtils.lerp(
         camera.rotation.y,
         baseYaw.current,
         0.05
       );
-
-      camera.rotation.x = THREE.MathUtils.lerp(
+      const newPitch = THREE.MathUtils.lerp(
         camera.rotation.x,
         insideStartRot.current,
         0.05
       );
 
+      camera.rotation.y = newYaw;
+      camera.rotation.x = newPitch;
       camera.rotation.z = 0;
 
-      rotationRef.current = camera.rotation.y;
+      rotationRef.current = newYaw;
+
       return;
     }
 
-    // Idle look mode
-    camera.rotation.y = rotationRef.current;
-    camera.rotation.x = insideStartRot.current;
-    camera.rotation.z = 0;
+    if (zoomState === "idle") {
+      camera.rotation.y = rotationRef.current;
+      camera.rotation.x = insideStartRot.current;
+      camera.rotation.z = 0;
+    }
   });
 
   return null;
 }
 
 /* --------------------------------------------
-   ⭐ INSTRUCTIONS POPUP (BLOCKS CLICKS)
+   STORY OVERLAY
 --------------------------------------------- */
-function InstructionsPopup({ onClose }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        background: "rgba(0,0,0,0.65)",
-        color: "white",
-        zIndex: 2000,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        fontSize: "22px",
-        textAlign: "center",
-        cursor: "pointer",
-        padding: "20px",
-        pointerEvents: "auto", // BLOCKS CLICKS UNDERNEATH
-      }}
-    >
-      {/* text does not capture clicks */}
-      <div style={{ pointerEvents: "none" }}>
-        <p><strong>Hold Left Click</strong> and drag to look around</p>
-        <p><strong>Click on the inmates</strong> to interact with them</p>
-        <p><strong>Click the text bubble</strong> to continue the story</p>
-        <p style={{ marginTop: "25px", opacity: 0.7 }}>
-          Click anywhere to continue
-        </p>
-      </div>
-    </div>
-  );
-}
 
 /* --------------------------------------------
-   ⭐ TWO-STEP STORY OVERLAY (LOWERED)
+   STORY OVERLAY
 --------------------------------------------- */
-function StoryOverlay({ onFinish }) {
-  const [step, setStep] = useState(0); // 0 = msg1, 1 = msg2, 2 = done
+
+function StoryOverlay() {
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const advance = () => {
-      setStep((prev) => {
-        if (prev === 0) return 1;
-        if (prev === 1) {
-          onFinish?.();
-          return 2;
-        }
-        return prev;
-      });
-    };
+    const hide = () => setVisible(false);
+    window.addEventListener("pointerdown", hide);
+    return () => window.removeEventListener("pointerdown", hide);
+  }, []);
 
-    window.addEventListener("pointerdown", advance);
-    return () => window.removeEventListener("pointerdown", advance);
-  }, [onFinish]);
-
-  if (step === 2) return null;
-
-  const messages = [
-    "Let us take a look at what they are talking about inside the prison...",
-    "Let us take a look at what they are talking about inside the prison...",
-  ];
+  if (!visible) return null;
 
   return (
     <div
-      className="absolute left-1/2 transform -translate-x-1/2 
-                 text-center text-2xl text-white font-semibold 
+      className="absolute top-40 left-1/2 transform -translate-x-1/2 text-center 
+                 text-2xl text-white font-semibold 
                  bg-black/70 px-6 py-4 rounded-xl shadow-lg"
-      style={{
-        top: "15%",
-        zIndex: 999,
-        pointerEvents: "none", // bubble itself does NOT capture clicks
-      }}
+      style={{ zIndex: 999 }}
     >
-      <p>{messages[step]}</p>
+      <p>Let us take a look at what they are talking about inside the prison...</p>
     </div>
   );
 }
@@ -425,9 +381,19 @@ export default function HomeWorld({ onBack, onExplore }) {
   const [zoomState, setZoomState] = useState("idle");
   const [selected, setSelected] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [exploreZooming, setExploreZooming] = useState(false);
-  const [storyFinished, setStoryFinished] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(true);
+
+  // ADDED — TRACK WHICH GROUPS HAVE BEEN READ
+  const [textsRead, setTextsRead] = useState({
+    group1: false,
+    group2: false,
+    group3: false,
+    group4: false,
+  });
+
+  // ADDED — CHECK IF ALL GROUPS READ
+  const allRead = Object.values(textsRead).every(Boolean);
 
   const { progress } = useProgress();
   const glbReady = progress === 100;
@@ -438,14 +404,62 @@ export default function HomeWorld({ onBack, onExplore }) {
   /* GROUP POSITIONS */
   const m1 = { pos: [1, 4.5, -5], rot: 0 };
   const m2 = { pos: [0.5, 4.5, -5], rot: Math.PI / 2 };
+
   const m3 = { pos: [5.5, 4.5, 5], rot: Math.PI / 1.8, pose: "lean" };
   const m4 = { pos: [6, 4.5, 5], rot: -Math.PI / 2, pose: "open" };
+
   const m5 = { pos: [1.5, 1.2, 2], rot: Math.PI / 1.5, pose: "cross" };
-  const m6 = { pos: [2.5, 1.2, 2], rot: -Math.PI / 1.5, pose: "down" };
+  const m6 = { pos: [2.5, 1.2, 2], rot: Math.PI / 1.5, pose: "down" };
   const m7 = { pos: [2, 1.2, 2.5], rot: Math.PI, pose: "behind" };
+
   const m8 = { pos: [0, 4.5, 6], rot: Math.PI, pose: "walllean" };
 
+  /* EXPLORE TARGET */
   const EXPLORE_TARGET = new THREE.Vector3(-10, 6, 0);
+
+  /* ROTATION CENTERS */
+  const group1Center = new THREE.Vector3(
+    (m1.pos[0] + m2.pos[0]) / 2,
+    (m1.pos[1] + m2.pos[1]) / 2,
+    (m1.pos[2] + m2.pos[2]) / 2
+  );
+
+  const group2Center = new THREE.Vector3(
+    (m3.pos[0] + m4.pos[0]) / 2,
+    (m3.pos[1] + m4.pos[1]) / 2,
+    (m3.pos[2] + m4.pos[2]) / 2
+  );
+
+  const group3Center = new THREE.Vector3(
+    (m5.pos[0] + m6.pos[0] + m7.pos[0]) / 3,
+    (m5.pos[1] + m6.pos[1] + m7.pos[1]) / 3,
+    (m5.pos[2] + m6.pos[2] + m7.pos[2]) / 3
+  );
+
+  const group4Center = new THREE.Vector3(...m8.pos);
+
+  /* CAMERA TARGETS */
+  const rotateTarget =
+    selected === "group1"
+      ? group1Center
+      : selected === "group2"
+      ? group2Center
+      : selected === "group3"
+      ? group3Center
+      : selected === "group4"
+      ? group4Center
+      : null;
+
+  const zoomTarget =
+    selected === "group1"
+      ? new THREE.Vector3(1, 6.2, -5.5)
+      : selected === "group2"
+      ? new THREE.Vector3(5.8, 6, 4.3)
+      : selected === "group3"
+      ? new THREE.Vector3(2.5, 2.3, 2)
+      : selected === "group4"
+      ? new THREE.Vector3(0, 6, 5.3)
+      : null;
 
   /* CLICK HANDLERS */
   const animateSelect = (groupId) => {
@@ -461,12 +475,22 @@ export default function HomeWorld({ onBack, onExplore }) {
 
   const handleBack = () => {
     setSidebarOpen(false);
+
+    // ADDED — MARK GROUP AS READ ON CLOSE
+    if (selected) {
+      setTextsRead((prev) => ({ ...prev, [selected]: true }));
+    }
+
     setZoomState("out");
 
     setTimeout(() => {
       setZoomState("idle");
       setSelected(null);
     }, 1200);
+  };
+
+  const handleExploreClick = () => {
+    setExploreZooming(true);
   };
 
   return (
@@ -478,12 +502,6 @@ export default function HomeWorld({ onBack, onExplore }) {
         position: "relative",
       }}
     >
-      {/* INSTRUCTIONS FIRST */}
-      {showInstructions && (
-        <InstructionsPopup onClose={() => setShowInstructions(false)} />
-      )}
-
-      {/* BACK BUTTON */}
       <button
         onClick={onBack}
         className="absolute top-4 left-4 z-50 bg-black text-white 
@@ -492,12 +510,10 @@ export default function HomeWorld({ onBack, onExplore }) {
         ← Back
       </button>
 
-      {/* TWO-STEP STORY BUBBLE */}
-      <StoryOverlay onFinish={() => setStoryFinished(true)} />
+      <StoryOverlay />
 
-      {/* SIDE PANEL */}
       {sidebarOpen && (
-        <div className="absolute top-0 right-0 w-[420px] h-full bg-white shadow-xl z-50">
+        <div className="absolute top-0 right-0 w-[420px] h-full overflow-y-auto bg-white shadow-xl z-50">
           <button
             onClick={handleBack}
             className="text-sm bg-black text-white px-3 py-1 m-4 rounded"
@@ -512,7 +528,6 @@ export default function HomeWorld({ onBack, onExplore }) {
         </div>
       )}
 
-      {/* MAIN CANVAS */}
       <Canvas
         camera={{ fov: 60, near: 0.1, far: 2000 }}
         dpr={[1, 1.25]}
@@ -534,10 +549,10 @@ export default function HomeWorld({ onBack, onExplore }) {
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 5]} intensity={1} />
 
-        {/* EXPLORE SIGN SHOWS ONLY AFTER STORY IS COMPLETELY FINISHED */}
-        {sceneReady && storyFinished && (
+        {/* SHOW EXPLORE SIGN ONLY IF ALL GROUPS READ */}
+        {sceneReady && allRead && (
           <>
-            <ExploreText onClick={() => setExploreZooming(true)} />
+            <ExploreText onClick={handleExploreClick} />
             <ExploreZoomController
               exploreZooming={exploreZooming}
               setExploreZooming={setExploreZooming}
@@ -550,7 +565,6 @@ export default function HomeWorld({ onBack, onExplore }) {
         <Suspense fallback={null}>
           <PrisonInterior />
 
-          {/* GROUPS */}
           <HoverGlow>
             <group onClick={() => animateSelect("group1")}>
               <Mannequin position={m1.pos} rotation={m1.rot} />
@@ -582,8 +596,8 @@ export default function HomeWorld({ onBack, onExplore }) {
           <LimitedLookCamera
             inside={inside}
             zoomState={zoomState}
-            zoomTarget={null}
-            rotateTarget={null}
+            zoomTarget={zoomTarget}
+            rotateTarget={rotateTarget}
           />
         </Suspense>
       </Canvas>

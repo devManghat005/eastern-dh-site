@@ -2,6 +2,7 @@ import React, { useState, useRef, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Text, Float } from "@react-three/drei";
 import { motion, AnimatePresence } from "framer-motion";
+import * as THREE from "three";
 
 // ------------------------------------------------------
 // 3D BACKGROUND SCENE — subtle movement, solemn atmosphere
@@ -39,7 +40,37 @@ function SoftLights() {
 }
 
 // ------------------------------------------------------
-// STORY SECTIONS — minimal words, conversational, solemn
+// LIGHT AT THE END OF THE TUNNEL
+// ------------------------------------------------------
+function TunnelLight({ onReach }) {
+  const ref = useRef();
+
+  useFrame(({ camera }) => {
+    if (!ref.current) return;
+
+    // distance between camera and light
+    const dist = Math.abs(camera.position.z - ref.current.position.z);
+
+    if (dist < 1) {
+      onReach();
+    }
+  });
+
+  return (
+    <mesh ref={ref} position={[0, 0, -10]}>
+      <sphereGeometry args={[1.8, 32, 32]} />
+      <meshStandardMaterial
+        emissive={"#ffffff"}
+        emissiveIntensity={6}
+        color={"white"}
+      />
+      <pointLight intensity={4} color="white" distance={20} />
+    </mesh>
+  );
+}
+
+// ------------------------------------------------------
+// STORY SECTIONS
 // ------------------------------------------------------
 const STEPS = [
   {
@@ -89,13 +120,24 @@ export default function Story() {
     setStep((s) => Math.max(s - 1, 0));
   };
 
+  // when the user reaches the light
+  const goToNextPage = () => {
+    window.location.href = "/next";
+  };
+
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
       {/* 3D Background */}
       <Canvas className="absolute inset-0" camera={{ position: [0, 0, 4], fov: 45 }}>
+        <fog attach="fog" args={["black", 2, 14]} />
+
         <SoftLights />
+
         <Suspense fallback={null}>
           <FloatingOrbs />
+          {step === STEPS.length - 1 && (
+  <TunnelLight onReach={goToNextPage} />
+)}
         </Suspense>
       </Canvas>
 
