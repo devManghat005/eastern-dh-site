@@ -21,6 +21,8 @@ useGLTF.preload("/models/the_prison.glb");
 const ZOOM_TARGET = new THREE.Vector3(50, 4, -42);
 
 const STORY_TEXTS = [
+  "Eastern State Penn in the years 1839 to 1850 in Philadelphia, PA.",
+  "You will be one of the 521 inmates held during this period.",
   "In the quiet outskirts of the old penitentiary...",
   "Stories linger in the air..... shadows of people and moments long gone.",
   "Before we step inside, take a moment to understand where you are.",

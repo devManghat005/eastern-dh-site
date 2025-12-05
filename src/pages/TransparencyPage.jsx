@@ -3,7 +3,7 @@ import BackButton from "../components/BackButton";
 
 export default function TransparencyPage({ onBack }) {
   return (
-    <div className="min-h-screen bg-black text-white pt-32 px-10 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white pt-32 px-10 pb-32 relative overflow-hidden">
 
       {/* BACK BUTTON */}
       <BackButton onBack={onBack} />

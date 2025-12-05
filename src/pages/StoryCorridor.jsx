@@ -263,11 +263,11 @@ function FloatingNarrator({ setNarratorActive }) {
   const lines = [
     { x:10, text:"Hey... come take a walk with me.\nThis corridor speaks long before you do." },
     { x:20, text:"You might be wondering what all this is.\nAnd why any of it matters." },
-    { x:30, text:"When Eastern State opened,\nit was believed that solitude could reshape a person.\nSilence was thought to guide someone back to themselves.\nThibaut writes about this hope." },
-    { x:40, text:"But inside these walls,\nreflection slipped into strain.\nWhat sounded gentle became something harsher.\nSmith and Haney describe this shift." },
-    { x:50, text:"Modern research confirms what people here already felt.\nLong isolation unsettles the mind.\nIt blurs identity.\nShalev shows how deep this damage runs." },
+    { x:30, text:"When Eastern State opened,\nit was believed that solitude could reshape a person.\nSilence was thought to guide someone back to themselves.\n(Thibaut, 1982)" },
+    { x:40, text:"But inside these walls,\nreflection slipped into strain.\nWhat sounded gentle became something harsher.\n(Smith, 2009; Haney, 2018)" },
+    { x:50, text:"Modern research confirms what people here already felt.\nLong isolation unsettles the mind.\nIt blurs identity.\n(Shalev, 2009)" },
     { x:60, text:"And it raises a question.\nWhy did it take so long\nfor the world to recognize the harm?" },
-    { x:70, text:"This place rested on faith in discipline.\nIt was believed that strict order\ncould produce moral change.\nRubin and Meranze study this belief." },
+    { x:70, text:"This place rested on faith in discipline.\nIt was believed that strict order\ncould produce moral change.\n(Rubin, 2018)" },
     { x:80, text:"Yet walking here,\nyou feel the contradiction.\nThe hope of renewal never matched\nthe reality of separation." },
     { x:90, text:"The records echo this.\nSome details are sparse.\nOthers overly exact.\nMuch of a person is missing on the page." },
     { x:100, text:"Now look at the walls.\nThese names belonged to people\nwho lived through this experiment." },
@@ -276,6 +276,7 @@ function FloatingNarrator({ setNarratorActive }) {
     { x:130, text:"Eastern State did not fail through poor execution.\nIt failed because the idea itself was flawed." },
     { x:140, text:"I have taken enough of your time.\nLet me leave you with this:\na quiet reflection from a past\nthat still shapes the world we move through." }
   ];
+  
 
   return (
     <>
