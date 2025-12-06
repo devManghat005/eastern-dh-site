@@ -11,10 +11,6 @@ export default function BibliographyPage({ onBack }) {
         Bibliography
       </h1>
 
-      <p className="text-gray-300 max-w-4xl text-xl leading-relaxed mb-10">
-
-      </p>
-
       <ul className="list-disc pl-10 text-xl text-gray-300 space-y-8 max-w-4xl">
 
         <li>
@@ -27,8 +23,7 @@ export default function BibliographyPage({ onBack }) {
             Penitentiary and the ideological foundations of the Pennsylvania System of solitary confinement.
             Thibaut examines how reformers believed isolation, labor, and religious instruction would
             foster moral transformation, while also documenting the widening gap between theory and lived
-            reality. This source directly informs the project’s discussion of how hope-driven reform ideals
-            produced unintended psychological and institutional consequences.
+            reality.
           </p>
         </li>
 
@@ -38,10 +33,7 @@ export default function BibliographyPage({ onBack }) {
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
             Smith traces the historical development of solitary confinement from its origins in Enlightenment
-            prison reform through its international expansion and eventual criticism. The article explains
-            how isolation shifted from a moral rehabilitation strategy into a tool of control and punishment.
-            This historical framework supports the project’s exploration of the contradiction between the
-            intended humanitarian goals of the penitentiary and the psychological harm it ultimately produced.
+            prison reform through its international expansion and eventual criticism.
           </p>
         </li>
 
@@ -50,12 +42,8 @@ export default function BibliographyPage({ onBack }) {
             Haney, Craig. “Restricting the Use of Solitary Confinement.” Annual Review of Criminology, vol. 1, 2018, pp. 285–310.
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
-            Haney synthesizes decades of psychological research on the effects of solitary confinement,
-            demonstrating consistent links between isolation and anxiety, hallucinations, emotional
-            breakdown, identity erosion, and increased suicide risk. This study provides the modern scientific
-            foundation for the project’s claims about the long-term mental health consequences of isolation.
-            It helps connect the historical experiment at Eastern State to contemporary debates on prison reform
-            and human rights.
+            Haney synthesizes decades of psychological research showing consistent links between isolation,
+            emotional breakdown, hallucinations, and suicide risk.
           </p>
         </li>
 
@@ -65,12 +53,7 @@ export default function BibliographyPage({ onBack }) {
             Willan Publishing, 2009.
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
-            Shalev provides a detailed ethnographic and policy analysis of modern supermax prisons and the
-            psychological effects of long-term isolation. Through descriptions of daily routines, sensory
-            deprivation, and extended confinement, the book documents how solitary confinement reshapes mental
-            health, identity, and perception of time. This source supports the project’s emphasis on the depth
-            and lasting nature of psychological harm caused by isolation beyond the early historical period of
-            Eastern State.
+            Shalev provides an ethnographic and policy-driven analysis of modern isolation prisons.
           </p>
         </li>
 
@@ -80,11 +63,7 @@ export default function BibliographyPage({ onBack }) {
             Law & Social Inquiry, vol. 43, no. 4, 2018.
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
-            Rubin examines why solitary confinement persisted as a central feature of American punishment even
-            after its failures became widely known. The article argues that institutional momentum, administrative
-            convenience, and faith in discipline sustained isolation as a control strategy rather than a genuine
-            rehabilitative practice. This work directly informs the project’s discussion of how belief in strict
-            order allowed systems like Eastern State to endure despite their damaging consequences.
+            Rubin explains why solitary confinement persisted despite its documented failures.
           </p>
         </li>
 
@@ -93,7 +72,7 @@ export default function BibliographyPage({ onBack }) {
             OpenAI. “ChatGPT.” OpenAI, https://openai.com/chatgpt.
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
-            ChatGPT assisted primarily with debugging code and helping write the JavaScript and React logic needed to build the webpage.
+            ChatGPT assisted with debugging code and developing the React-based interface.
           </p>
         </li>
 
@@ -102,8 +81,37 @@ export default function BibliographyPage({ onBack }) {
             Bache, Franklin. <span className="italic">Observations and Reflections on the Penitentiary System.</span> Philadelphia, 1829.
           </span>
           <p className="mt-2 text-gray-400 leading-relaxed">
-            This primary source letter reflects how 19th-century medical and prison professionals understood and defended the system of solitary confinement at the time, offering valuable historical perspective for deeper reading.
+            A primary source reflecting early professional support for solitary confinement.
           </p>
+        </li>
+
+      </ul>
+
+      {/* IMAGE SOURCES SECTION */}
+      <h2 className="text-4xl font-bold mt-20 mb-8 tracking-wide">
+        Image Sources
+      </h2>
+
+      <ul className="list-disc pl-10 text-xl text-gray-300 space-y-6 max-w-4xl">
+
+        <li className="italic">
+          Encyclopedia of Greater Philadelphia. “Eastern State Penitentiary.”  
+          https://philadelphiaencyclopedia.org/essays/eastern-state-penitentiary/  
+        </li>
+
+        <li className="italic">
+          WHYY. “How Eastern State Penitentiary Became a Philly Attraction.”  
+          https://whyy.org/articles/history-behind-the-walls-how-philadelphias-most-famous-haunted-house-began/  
+        </li>
+
+        <li className="italic">
+          DiscoverNEPA. “Haunted History Awaits at Eastern State Penitentiary.”  
+          https://discovernepa.com/things-to-do/haunted-history-awaits-at-eastern-state-penitentiary/  
+        </li>
+
+        <li className="italic">
+          Planetizen. “Eastern State Penitentiary: A Class about the Past Speaks to the Present and the Future.”  
+          https://www.planetizen.com/news/2019/06/104769-eastern-state-penitentiary-class-about-past-speaks-present-and-future  
         </li>
 
       </ul>
