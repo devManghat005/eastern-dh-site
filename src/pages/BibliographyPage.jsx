@@ -89,6 +89,15 @@ export default function BibliographyPage({ onBack }) {
             order allowed systems like Eastern State to endure despite their damaging consequences.
           </p>
         </li>
+        <li>
+          <span className="italic">
+            OpenAI. “ChatGPT.” OpenAI, https://openai.com/chatgpt.
+          </span>
+          <p className="mt-2 text-gray-400 leading-relaxed">
+            ChatGPT assisted primarily with debugging code and helping write the JavaScript and React logic needed to build the webpage.
+          </p>
+        </li>
+
 
       </ul>
 

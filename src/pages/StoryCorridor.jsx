@@ -274,7 +274,7 @@ function FloatingNarrator({ setNarratorActive }) {
     { x:110, text:"Their stories remind us\nthat the system did not uplift them.\nIt shaped harm instead of repair." },
     { x:120, text:"So what do we take from all this?\nMaybe the realization\nthat a system can be built with hope\nand still cause harm." },
     { x:130, text:"Eastern State did not fail through poor execution.\nIt failed because the idea itself was flawed." },
-    { x:140, text:"I have taken enough of your time.\nLet me leave you with this:\na quiet reflection from a past\nthat still shapes the world we move through." }
+    { x:140, text:"I have taken enough of your time.\nLet me leave you with this.\na quiet reflection from a past\nthat still shapes the world we move through." }
   ];
   
 
