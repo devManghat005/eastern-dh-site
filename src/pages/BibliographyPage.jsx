@@ -12,9 +12,7 @@ export default function BibliographyPage({ onBack }) {
       </h1>
 
       <p className="text-gray-300 max-w-4xl text-xl leading-relaxed mb-10">
-        Below is a curated list of the archival sources, research material, and
-        digital humanities scholarship referenced in the development of this
-        project.
+
       </p>
 
       <ul className="list-disc pl-10 text-xl text-gray-300 space-y-8 max-w-4xl">
@@ -89,6 +87,7 @@ export default function BibliographyPage({ onBack }) {
             order allowed systems like Eastern State to endure despite their damaging consequences.
           </p>
         </li>
+
         <li>
           <span className="italic">
             OpenAI. “ChatGPT.” OpenAI, https://openai.com/chatgpt.
@@ -98,6 +97,14 @@ export default function BibliographyPage({ onBack }) {
           </p>
         </li>
 
+        <li>
+          <span className="italic">
+            Bache, Franklin. <span className="italic">Observations and Reflections on the Penitentiary System.</span> Philadelphia, 1829.
+          </span>
+          <p className="mt-2 text-gray-400 leading-relaxed">
+            This primary source letter reflects how 19th-century medical and prison professionals understood and defended the system of solitary confinement at the time, offering valuable historical perspective for deeper reading.
+          </p>
+        </li>
 
       </ul>
 
